@@ -1,6 +1,6 @@
 # Contribution-clipping feasibility decision
 
-**Decision: Option C ? leave clipping unimplemented; keep MTD plus SPDZ2k aggregation as the implemented core.**
+**Decision: Option C -> leave clipping unimplemented; keep MTD plus SPDZ2k aggregation as the implemented core.**
 
 ## Why no clipping is being integrated now
 
