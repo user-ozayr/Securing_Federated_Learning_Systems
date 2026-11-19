@@ -1,23 +1,22 @@
+import json
+import os
 from dataclasses import replace
 from types import SimpleNamespace
-import os
 
+import flwr.simulation
 import pandas as pd
 import pytest
 import torch
+from flwr.common import parameters_to_ndarrays
 from torch.utils.data import TensorDataset
 
-import flwr.simulation
 import fl_security.federated.flower_simulation as flower_runner
-from flwr.common import parameters_to_ndarrays
-
-from fl_security.smpc.local_demo import run_with_local_aggregators
 
 
-def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
+def test_flower_strategy_uses_active_spdz2k_and_aborts_on_client_mismatch(
     monkeypatch, tmp_path
 ):
-    """Exercise the actual Flower NumPyClient/Strategy path with only Ray mocked."""
+    """Exercise Flower's secure client/strategy path without starting MPC processes."""
     torch.set_num_threads(1)
     images = torch.randn(6, 3, 32, 32)
     labels = torch.tensor([0, 1, 0, 1, 0, 1], dtype=torch.long)
@@ -34,13 +33,67 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
         flower_runner, "partition_data", lambda *args, **kwargs: client_partitions
     )
 
-    def deterministic_flower_scheduler(client_fn, num_clients, config, strategy, **kwargs):
-        # Coordinator-only secrets must not be inherited by Ray/client workers.
-        assert "FL_SMPC_AGGREGATORS_JSON" not in os.environ
+    parties = [
+        SimpleNamespace(client_host=f"127.0.0.{party_id + 1}")
+        for party_id in range(3)
+    ]
+    monkeypatch.setattr(
+        flower_runner, "load_party_configuration", lambda count: parties
+    )
+    monkeypatch.setattr(flower_runner, "client_port_base", lambda: 21_000)
+    monkeypatch.setenv("FL_MPSPDZ_HOME", "test-mp-spdz")
+    monkeypatch.setenv("FL_MPSPDZ_CLIENT_CREDENTIALS_DIR", str(tmp_path))
+    monkeypatch.setenv("FL_MPSPDZ_PARTIES_JSON", '{"coordinator-secret":"hidden"}')
+    monkeypatch.setenv("FL_MPSPDZ_CONTROL_TOKEN", "party-control-secret-" + ("x" * 32))
+    monkeypatch.setenv("FL_MTD_SECRET", "mtd-secret-for-test-" + ("x" * 32))
+
+    submitted = {}
+    round_calls = []
+    abort_calls = []
+
+    def fake_submit(state, num_examples, client_id, **kwargs):
+        submitted[client_id] = (
+            {key: value.detach().cpu().clone() for key, value in state.items()},
+            num_examples,
+        )
+        return sum(value.numel() for value in state.values()) * 8
+
+    def fake_receive(global_state, *, expected_total_examples, **kwargs):
+        assert expected_total_examples == sum(
+            count for _, count in submitted.values()
+        )
+        result = {}
+        for key, base in global_state.items():
+            if torch.is_floating_point(base):
+                result[key] = sum(
+                    (state[key] * count for state, count in submitted.values()),
+                    torch.zeros_like(base),
+                ) / expected_total_examples
+            else:
+                result[key] = base.detach().clone()
+        return result
+
+    monkeypatch.setattr(
+        flower_runner, "start_round", lambda *args: round_calls.append(args)
+    )
+    monkeypatch.setattr(
+        flower_runner, "check_round_running", lambda *args: None
+    )
+    monkeypatch.setattr(flower_runner, "submit_client_update", fake_submit)
+    monkeypatch.setattr(
+        flower_runner, "receive_weighted_average", fake_receive
+    )
+    monkeypatch.setattr(flower_runner, "finish_round", lambda *args: None)
+    monkeypatch.setattr(
+        flower_runner, "abort_round", lambda *args: abort_calls.append(args)
+    )
+
+    def deterministic_flower_scheduler(
+        client_fn, num_clients, config, strategy, **kwargs
+    ):
+        assert "FL_MPSPDZ_PARTIES_JSON" not in os.environ
+        assert "FL_MPSPDZ_CONTROL_TOKEN" not in os.environ
         assert "FL_MTD_SECRET" not in os.environ
-        assert "FL_SMPC_CONTROL_TOKEN" not in os.environ
-        assert "FL_SMPC_CLIENT_KEYS_JSON" not in os.environ
-        assert "FL_SMPC_CLIENT_TOKENS_JSON" in os.environ
         proxies = {
             str(cid): SimpleNamespace(cid=str(cid)) for cid in range(num_clients)
         }
@@ -53,11 +106,14 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
             )
             results = []
             for proxy, fit_ins in instructions:
+                assert "local_client_tokens_json" not in fit_ins.config
+                assert json.loads(fit_ins.config["mp_spdz_client_hosts_json"]) == [
+                    party.client_host for party in parties
+                ]
                 client = client_fn(proxy.cid)
                 fit_res = client.fit(fit_ins)
-                # In SMPC mode, a Flower FitRes must contain no client tensors.
                 assert parameters_to_ndarrays(fit_res.parameters) == []
-                assert fit_res.metrics["shares_uploaded"] == 1
+                assert fit_res.metrics["mp_spdz_input_submitted"] == 1
                 results.append((proxy, fit_res))
 
             parameters, fit_metrics = strategy.aggregate_fit(
@@ -66,14 +122,12 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
             assert parameters is not None
             assert fit_metrics["smpc_enabled"] == 1
             assert fit_metrics["selected_clients"] == 3
-            assert fit_metrics["aggregators_used"] == 3
+            assert fit_metrics["mp_spdz_parties_used"] == 3
 
             loss, evaluation_metrics = strategy.evaluate(server_round, parameters)
             assert loss >= 0
             assert 0.0 <= evaluation_metrics["accuracy"] <= 1.0
 
-            # A malicious client cannot inflate its FedAvg weight by lying
-            # about num_examples in FitRes; the server knows each partition size.
             forged_results = [
                 (proxy, replace(fit_res, num_examples=fit_res.num_examples + 1))
                 if index == 0 else (proxy, fit_res)
@@ -81,6 +135,8 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
             ]
             with pytest.raises(RuntimeError, match="example counts"):
                 strategy.aggregate_fit(server_round, forged_results, [])
+            with pytest.raises(RuntimeError, match="selected client did not complete"):
+                strategy.aggregate_fit(server_round, results[:-1], [])
 
         return None
 
@@ -102,14 +158,12 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
         "mtd": {
             "enabled": True,
             "selection_strategy": "random",
-            "committee_size": 2,
             "change_every_round": True,
         },
         "smpc": {
             "enabled": True,
-            "scheme": "additive_sharing",
+            "backend": "mp_spdz_spdz2k",
             "fixed_point_scale": 100_000,
-            "field_modulus": 2305843009213693951,
             "num_aggregation_parties": 3,
             "min_clients_per_round": 2,
         },
@@ -126,15 +180,18 @@ def test_flower_strategy_uses_client_to_party_shares_not_plaintext_updates(
         },
     }
 
-    mtd_secret = "mtd-secret-for-test-" + ("x" * 32)
-    monkeypatch.setenv("FL_MTD_SECRET", mtd_secret)
-    run_with_local_aggregators(config)
-    assert os.environ["FL_MTD_SECRET"] == mtd_secret
+    flower_runner.run_flower_simulation(config)
+    assert len(round_calls) == 1
+    assert len(submitted) == 3
+    assert len(abort_calls) == 2
+    assert os.environ["FL_MTD_SECRET"].startswith("mtd-secret-for-test-")
+    assert os.environ["FL_MPSPDZ_CONTROL_TOKEN"].startswith(
+        "party-control-secret-"
+    )
 
     results = pd.read_csv(tmp_path / "flower_secure_smoke_results.csv")
     assert len(results) == 1
     assert results.loc[0, "smpc_enabled"] == 1
     assert results.loc[0, "selected_clients"] == 3
     assert results.loc[0, "completed_clients"] == 3
-    assert results.loc[0, "share_payload_bytes"] > 0
-    assert results.loc[0, "aggregator_cleanup_failures"] == 0
+    assert results.loc[0, "mp_spdz_input_bytes"] > 0

@@ -1,0 +1,77 @@
+from Compiler.types import Array, regint, sint
+from Compiler.library import for_range, if_
+
+program.active = True
+CHUNK_SIZE = 1024
+selected_ids = [int(value) for value in program.args[1].split(",")]
+expected_counts = [int(value) for value in program.args[2].split(",")]
+input_count = int(program.args[3])
+output_client_id = int(program.args[4])
+client_port_base = int(program.args[5])
+max_client_id = max(selected_ids + [output_client_id])
+
+if (
+    not selected_ids
+    or len(expected_counts) != len(selected_ids)
+    or any(count <= 0 for count in expected_counts)
+    or input_count <= 1
+    or output_client_id in selected_ids
+):
+    raise ValueError("invalid secure aggregation program arguments")
+
+num_chunks = (input_count + CHUNK_SIZE - 1) // CHUNK_SIZE
+padded_count = num_chunks * CHUNK_SIZE
+listen_for_clients(client_port_base)
+totals = Array(padded_count, sint)
+totals.assign_all(0)
+seen = Array(max_client_id + 1, regint)
+seen.assign_all(0)
+
+for _ in range(len(selected_ids)):
+    client_id = accept_client_connection(client_port_base)
+    @if_(client_id < 0)
+    def _():
+        crash()
+    @if_(client_id > max_client_id)
+    def _():
+        crash()
+
+    is_selected = regint(0)
+    expected_count = regint(0)
+    for index, selected_id in enumerate(selected_ids):
+        is_selected += client_id == selected_id
+        expected_count += (client_id == selected_id) * expected_counts[index]
+    @if_(is_selected != 1)
+    def _():
+        crash()
+    @if_(seen[client_id] != 0)
+    def _():
+        crash()
+    seen[client_id] = 1
+
+    first = Array.create_from(sint.receive_from_client(CHUNK_SIZE, client_id))
+    count_mismatch = (first[0] != expected_count).reveal()
+    @if_(count_mismatch)
+    def _():
+        crash()
+    @for_range(CHUNK_SIZE)
+    def _(offset):
+        totals[offset] += first[offset]
+
+    @for_range(num_chunks - 1)
+    def _(chunk_index):
+        values = Array.create_from(
+            sint.receive_from_client(CHUNK_SIZE, client_id)
+        )
+        base = (chunk_index + 1) * CHUNK_SIZE
+        @for_range(CHUNK_SIZE)
+        def _(offset):
+            totals[base + offset] += values[offset]
+    closeclientconnection(client_id)
+
+output_socket = accept_client_connection(client_port_base)
+@if_(output_socket != output_client_id)
+def _():
+    crash()
+totals.reveal_to_clients([output_socket])
+closeclientconnection(output_socket)

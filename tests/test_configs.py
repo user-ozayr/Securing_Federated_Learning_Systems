@@ -19,13 +19,35 @@ def test_secure_config_rejects_a_client_fraction_below_minimum_cohort():
             "num_clients": 5,
             "fraction_train": 0.4,
         },
-        "mtd": {"enabled": True, "committee_size": 3},
+        "mtd": {"enabled": True},
         "smpc": {
             "enabled": True,
+            "backend": "mp_spdz_spdz2k",
             "num_aggregation_parties": 4,
             "min_clients_per_round": 3,
             "fixed_point_scale": 1_000_000,
         },
     }
     with pytest.raises(ValueError, match="too low"):
+        validate_config(config)
+
+
+@pytest.mark.parametrize("backend", ["additive_sharing", ""])
+def test_secure_config_rejects_unsupported_or_missing_backend(backend):
+    config = {
+        "experiment": {"name": "backend-check", "seed": 1, "rounds": 1},
+        "federated_learning": {
+            "framework": "flower",
+            "num_clients": 4,
+            "fraction_train": 1.0,
+        },
+        "smpc": {
+            "enabled": True,
+            "backend": backend,
+            "num_aggregation_parties": 3,
+            "min_clients_per_round": 2,
+            "fixed_point_scale": 1_000_000,
+        },
+    }
+    with pytest.raises(ValueError, match="mp_spdz_spdz2k"):
         validate_config(config)

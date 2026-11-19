@@ -6,14 +6,13 @@ from fl_security.attacks.byzantine import ByzantineAttacker
 from fl_security.federated.aggregation import weighted_fedavg
 from fl_security.federated.training import train_local
 from fl_security.mtd.controller import MTDController
-from fl_security.smpc.fixed_point import FixedPointEncoder
 
 
-def test_sign_flip_client_updates_reach_secure_fedavg():
+def test_sign_flip_client_updates_reach_fedavg():
     config = {
         "experiment": {"seed": 7},
         "federated_learning": {"num_clients": 2},
-        "mtd": {"enabled": True, "committee_size": 2},
+        "mtd": {"enabled": True},
         "smpc": {"enabled": True, "num_aggregation_parties": 2, "min_clients_per_round": 2},
         "attacks": {
             "enabled": True,
@@ -34,14 +33,9 @@ def test_sign_flip_client_updates_reach_secure_fedavg():
         attacker.perturb_update(cid, 1, global_state, local)
         for cid, local in enumerate(honest_states)
     ]
-    secure_average = weighted_fedavg(
-        poisoned, [1, 1], global_state,
-        encoder=FixedPointEncoder(1_000_000),
-        committees={index: round_config["committees"][cid]
-                    for index, cid in enumerate(round_config["selected_clients"])},
-    )
+    average = weighted_fedavg(poisoned, [1, 1], global_state)
     torch.testing.assert_close(
-        secure_average["weight"], torch.tensor([-2.0, -1.0]), atol=1e-6, rtol=0
+        average["weight"], torch.tensor([-2.0, -1.0]), atol=1e-6, rtol=0
     )
 
 

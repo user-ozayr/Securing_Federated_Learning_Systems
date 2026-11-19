@@ -1,213 +1,96 @@
-# Threat Model and Security Claims
+# SPDZ2k Threat Model
 
-## 1. System boundary
+## Protected assets
 
-The prototype implements horizontal federated learning with a coordinating
-Flower server, simulated clients, round-scoped Moving Target Defence (MTD), and
-separately running aggregation-party services.
+- Each client's weighted model update before aggregation.
+- MP-SPDZ party private keys, client private keys, and coordinator control
+  tokens.
+- Correct execution of the weighted-sum circuit, including integrity checks
+  performed by SPDZ2k.
 
-The secure aggregation data path has two additive-sharing stages:
+## Roles and trust boundaries
 
-1. Each client sample-weights and fixed-point encodes its model parameters,
-   maps them into the prime field Z_q, creates random additive shares, and
-   sends one share only to each aggregation party in its assigned committee.
-2. Each aggregation party sums the client shares addressed to it. It then
-   re-shares that first-stage partial sum with fresh randomness across every
-   aggregation party. The first-stage partial sums are never returned to the
-   coordinator.
-3. Each party sums the second-stage shares it receives and returns one fresh
-   share of the global aggregate. The coordinator combines only these
-   second-stage shares, decodes the fixed-point aggregate, and divides by the
-   total number of client examples.
+- **Clients** hold local training data and submit model tensors multiplied by
+  their server-verified example counts. Client authentication proves
+  possession of a provisioned MP-SPDZ client key; it does not prove that the
+  client trained honestly.
+- **Aggregation parties** jointly run the pinned MP-SPDZ v0.4.3 SPDZ2k
+  protocol. The dishonest-majority security assumption permits up to `n - 1`
+  corrupt parties, provided at least one party is honest and the protocol
+  completes.
+- **Flower coordinator/output client** selects the cohort, distributes the
+  global model, checks Flower proxy identities and sample counts, and receives
+  the final aggregate as the designated output client.
+- **Network and deployment operators** provision credentials, configure
+  party/client reachability, and provide TLS for control endpoints. The
+  included party service implements authenticated control requests but does
+  not terminate TLS.
 
-The secure-mode Flower FitRes contains an empty parameter list and the local
-example count. The coordinator checks that the reported count agrees with the
-server-known client partition size and uses the server-known value for
-aggregation weights.
+## In-scope adversaries and guarantees
 
-## 2. Adversaries and assumptions
+SPDZ2k protects the private inputs and correctness of the secure computation
+against malicious aggregation parties under the protocol's assumptions. If a
+party deviates from the protocol or a MAC check fails, the round aborts rather
+than returning a success-shaped fallback. The implementation uses authenticated
+MP-SPDZ client I/O and reveals the weighted sum and total sample count only to
+the configured output client.
 
-The intended confidentiality analysis assumes:
+The party control service authenticates requests with per-party HMAC keys,
+rejects stale/replayed control requests, journals consumed request IDs, and
+rejects reuse of a round ID. Remote control URLs must use HTTPS. The local
+demo's loopback HTTP allowance is for local testing only.
 
-- **Honest-but-curious coordinator.** The coordinator follows client
-  selection, model distribution, committee assignment, party finalization,
-  and aggregation as implemented. It observes client identities, participation
-  and cohort sizes, the current global model, the final aggregate, and the
-  second-stage random shares. It does not deliberately send inconsistent
-  models to clients, manipulate participant cohorts to isolate a client, or
-  issue overlapping queries intended to difference out a participant.
-- **Aggregation-party non-collusion.** Fewer than all parties collude in the
-  second-stage re-sharing. For an individual client's first-stage update
-  shares, a coalition must also obtain every share in that client's committee
-  to reconstruct the update. Collusion of all relevant parties is outside the
-  confidentiality guarantee.
-- **Authenticated client uploads.** Each client has an independent per-party
-  HMAC write token. Aggregator control tokens are held by the coordinator;
-  pairwise party-to-party HMAC keys are provisioned to the two parties in that
-  pair. Secrets are provisioned out-of-band and are never committed to Git.
-- **Confidential transport.** External deployments use HTTPS with TLS/mTLS or
-  an equivalently trusted service mesh. The built-in server binds plain HTTP
-  and does not itself terminate TLS.
-- **Bounded fixed-point arithmetic.** Weighted model values stay within the
-  centred finite-field range. The system has no zero-knowledge range proofs
-  to enforce this against an arbitrary malicious binary.
-- **Client partition and weight integrity.** In the simulation, the
-  coordinator knows each client's partition size and rejects mismatched
-  client-reported example counts. A real deployment would need an independently
-  verifiable weighting policy and must not trust a self-reported sample count.
+The Flower strategy rejects plaintext client parameters in SMPC mode, binds
+each result to its registered Flower proxy, checks that the full selected
+cohort completed, and verifies reported example counts against the
+server-known partitions. Any failed or missing selected client aborts the
+round. Robust per-client screening is rejected in secure mode because it is
+not computed within the MPC circuit.
 
-The coordinator receives all second-stage shares because it must reconstruct
-the global aggregate. The sum of those shares is the intended output and may
-itself leak information in very small cohorts or where an observer already
-knows all but one participant's update.
+## Explicit assumptions
 
-## 3. Implemented protections
+- At least one of the configured aggregation parties is honest.
+- Client and party keys are unique, confidential, and provisioned only to the
+  intended runtime.
+- The designated output client and its host are trusted with the aggregate.
+- The coordinator follows the protocol sufficiently to avoid deliberately
+  leaking information through cohort differencing or adversarial model
+  selection.
+- Deployed control endpoints, MP-SPDZ party links, and client links use
+  appropriately authenticated and confidential channels.
+- Party and coordinator clocks remain within the control service's five-minute
+  anti-replay timestamp window.
 
-### 3.1 Individual-update confidentiality in SMPC mode
+## Out of scope and limitations
 
-Client-side shares are created before the Flower FitRes boundary. The
-coordinator does not receive individual client parameter arrays. Each party
-authenticates client uploads, sums only shares addressed to it, and sends its
-first-stage partial sum only as fresh shares to the other parties. The
-coordinator cannot inspect the first-stage committee partial sums or combine
-their overlapping client-membership equations. It receives only the second
-stage shares of the global aggregate.
+- **Availability and dropout recovery:** every selected client and every
+  configured party must complete. Dropout, timeout, or protocol failure aborts
+  the round; there is no threshold reconstruction or recovery.
+- **All-party collusion or endpoint compromise:** collusion of all parties,
+  theft of client/party keys, or compromise of the output client can expose
+  private inputs or aggregates.
+- **Malicious clients:** the circuit does not prove that updates came from
+  honest training, enforce model norms, or provide range proofs. Poisoning
+  remains possible.
+- **Coordinator inference:** the coordinator sees identities, participation,
+  the current model, and the final aggregate. Minimum cohort size is not
+  differential privacy and does not prevent inference from repeated or
+  differenced cohorts.
+- **Host isolation:** the local demo uses separate processes on one machine.
+  It does not protect against a shared host, kernel, root, or coordinator
+  compromise.
+- **Cross-host validation:** the MP-SPDZ circuit has passed a separate active
+  three-party secure-sum probe, but the integrated Flower control/client path
+  has not been validated across independently administered hosts.
+- **Other privacy claims:** differential privacy, membership/property
+  inference resistance, gradient inversion resistance, and backdoor
+  attack-success-rate claims are not implemented or evaluated.
 
-Party services reject conflicting duplicate client uploads and conflicting
-party re-shares. They cache outgoing re-shares so a retry uses identical
-messages. After finalization, the coordinator acknowledges the result and
-party services clear client shares, first-stage outgoing re-shares,
-second-stage received shares, and cached output shares.
+## Failure behavior
 
-### 3.2 Moving Target Defence
-
-The MTD controller varies selected clients and per-client aggregation
-committees each round. Committee allocations are balanced so every configured
-party receives contributions from multiple selected clients. A secure round
-is aborted if client dropouts leave a party without the required minimum
-number of client shares or if too few clients complete.
-
-For reproducible thesis runs, MTD schedules derive deterministically
-from experiment.seed. This mode is repeatable but not unpredictable to an
-adversary who knows the seed. A live run must set a 32-byte-or-longer
-FL_MTD_SECRET in the Flower coordinator environment. The controller derives a
-round-scoped HMAC-SHA256 counter stream from that server-only secret and the
-experiment seed, and uses unbiased rejection sampling for selection and
-committee positions. The secret is not sent to clients or aggregation parties
-and is removed before simulated Ray workers start. The no-secret simulation
-mode must not be used as a production unpredictability guarantee.
-
-### 3.3 Flower client-result identity
-
-For each completed fit, the coordinator maps the Flower proxy ID back to the
-logical client ID assigned during registration. It rejects results from
-unregistered proxies, clients not selected for the current round, duplicate
-proxy results, and client-reported logical IDs that do not match the proxy
-mapping. This prevents a FitRes metric alone from choosing the identity used
-for aggregation and simulator telemetry. It is a runtime identity-consistency
-check, not independent cryptographic authentication of an external client.
-External deployments still require authenticated Flower transport and
-isolated client runtimes. In SMPC mode, share uploads additionally use
-per-client HMAC write tokens verified by each aggregation party.
-
-### 3.4 Poisoning attacks
-
-The simulator executes label flipping during local training and sign-flip or
-random-noise perturbations on client updates. These attacks exercise the
-configured training and aggregation path. Additive sharing protects the
-confidentiality of client updates under its assumptions; it does not detect,
-filter, or neutralize poisoning. MTD changes participation and party routing;
-it is not a Byzantine-robust aggregation algorithm.
-
-### 3.5 Output artifact safeguards
-
-Experiment log filenames are restricted to a single filename within the
-configured output directory. Traversal separators, drive/alternate-stream
-syntax, and symbolic-link output targets are rejected; file creation uses
-no-follow semantics where supported. CSV text cells that could be interpreted
-as spreadsheet formulas are prefixed to force text treatment. Numeric metrics
-remain numeric. The legacy root-level audit and report scripts have been
-removed in favour of the paired benchmark runner and its sanitized CSV output.
-
-## 4. Explicitly out of scope
-
-- Malicious-secure MPC, verifiable computation, zero-knowledge range proofs,
-  or Byzantine aggregation-party resistance.
-- A malicious coordinator that sends inconsistent models, manipulates client
-  cohorts, or deviates from the protocol. The MTD root secret prevents clients
-  from predicting future schedules when deployed correctly; it does not
-  prevent a malicious coordinator from choosing a harmful schedule.
-- Collusion of all aggregation parties in the second-stage re-sharing, or a
-  coalition that obtains every first-stage share in a client's committee.
-- Shamir threshold recovery, reconstruction after aggregator dropout, or
-  availability guarantees. A required party outage aborts the secure round.
-- Persistent storage and restart recovery for in-memory party state.
-- Differential privacy, backdoor triggers and attack-success rate, membership
-  inference, property inference, gradient inversion, or other inference attacks.
-- Traffic-analysis and timing side channels, compromised client operating
-  systems, credential theft, and production-grade key rotation.
-
-This prototype is not a production secure aggregation service or a formal
-cryptographic security proof. Claims must remain limited to the semi-honest
-assumptions, attacks, datasets, client partitions, and seeds actually tested.
-
-## 5. Local simulation limitation
-
-The local demo starts each aggregation party in a separate process, but all
-processes share one host and kernel. The local Ray simulation also uses a
-shared worker environment containing per-client test tokens so the synthetic
-workers can route requests by client ID; a compromised local worker can inspect
-that map. The local demo therefore verifies the end-to-end message flow and
-service interactions, but is not a malicious-host or malicious-client
-isolation test.
-
-For a meaningful multi-party trust boundary, deploy parties in separate
-administrative domains, use TLS/mTLS, provision pairwise party keys only to
-the intended pair, and provision each client's own party tokens only into that
-client's isolated runtime.
-
-
-## 6. Robust poisoning screening status
-
-The current codebase contains an optional plaintext update-screening mode:
-median-residual and cosine-direction anomaly indicators, update-norm checks,
-and filtering before sample-weighted aggregation, with a coordinate-wise
-median fallback. It is not enabled by the legacy benchmark configurations.
-It is not available together with the current SMPC implementation, because
-that backend exposes only aggregate sums and does not securely evaluate
-comparisons or anomaly scores. This is a documented integrity/privacy gap,
-not a protection that should be claimed for the hybrid configuration.
-
-A future privacy-preserving poisoning defence must compute the relevant
-robust statistics and client-selection decisions inside an MPC protocol,
-rather than exporting individual updates to the coordinator.
-
-
-## 7. Robust update screening
-
-In plaintext validation mode, the optional stateful robust detector evaluates
-completed client updates using four signals: (1) distance from the
-coordinate-wise median normalized by median absolute deviation, (2) cosine
-similarity to the current cohort median direction, (3) update norm relative
-to the cohort median norm, and (4) contribution consistency measured by
-cosine similarity with an exponential moving average of the client's
-previously accepted normalized update directions. A historical inconsistency
-is considered only after a configurable minimum history length. Flagged
-updates are ranked and no more than the configured maximum malicious-client
-count is rejected in one round. The remaining clients are aggregated with
-sample-weighted FedAvg. If the minimum survivor count would not be met, a
-coordinate-wise median fallback is used and no individual history profiles
-are updated in that round.
-
-For controlled experiments, per-round telemetry records detected IDs,
-accepted IDs, per-client scores and reasons, and detection true-positive,
-false-positive and false-negative counts against simulator ground truth.
-These labels are available only in the experiment simulator; a real
-deployment does not know the identity of malicious clients in advance.
-
-The detector is heuristic. It may falsely flag honest clients with
-non-IID data, concept drift, or legitimate changing objectives; adaptive or
-colluding attackers may remain statistically consistent. Its plaintext
-operation is not compatible with the present sum-only SMPC backend. A
-privacy-preserving version would need to implement the required robust
-statistics, temporal scoring, and selection within secure computation.
+Compilation errors, mismatched bytecode, unavailable parties, client omissions,
+input/output count mismatches, control authentication errors, process failures,
+and secure computation/MAC failures must prevent a new global model from
+being accepted. The coordinator attempts to stop all parties and clean
+round-specific artifacts; cleanup errors are surfaced and do not activate a
+plaintext or additive-sharing fallback.

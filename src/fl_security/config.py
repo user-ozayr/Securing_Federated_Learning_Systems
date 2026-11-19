@@ -29,29 +29,36 @@ def validate_config(config: dict):
         raise ValueError("federated_learning.framework must be 'flower'")
 
     mtd, smpc = config.get("mtd", {}), config.get("smpc", {})
-    if mtd.get("enabled", False) and int(mtd.get("committee_size", 3)) < 2:
-        raise ValueError("mtd.committee_size must be >= 2")
+    if not isinstance(mtd, dict) or not isinstance(smpc, dict):
+        raise ValueError("mtd and smpc sections must be mappings")
     if smpc.get("enabled", False):
-        parties = int(smpc.get("num_aggregation_parties", 0))
-        committee = int(mtd.get("committee_size", 3))
-        minimum = int(smpc.get("min_clients_per_round", 2))
+        if smpc.get("backend") != "mp_spdz_spdz2k":
+            raise ValueError(
+                "smpc.backend must be 'mp_spdz_spdz2k'; no other backend or fallback is supported"
+            )
+        parties = smpc.get("num_aggregation_parties")
+        minimum = smpc.get("min_clients_per_round", 2)
+        scale = smpc.get("fixed_point_scale", 1_000_000)
+        for key, value in (
+            ("num_aggregation_parties", parties),
+            ("min_clients_per_round", minimum),
+            ("fixed_point_scale", scale),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"smpc.{key} must be an integer")
         if parties < 2:
             raise ValueError("smpc.num_aggregation_parties must be >= 2")
         if minimum < 2:
             raise ValueError("smpc.min_clients_per_round must be >= 2")
-        if int(smpc.get("fixed_point_scale", 0)) <= 0:
+        if scale <= 0:
             raise ValueError("smpc.fixed_point_scale must be positive")
         if "threshold" in smpc or smpc.get("dropout_recovery", False):
-            raise ValueError("This additive-sharing prototype has no Shamir threshold/dropout recovery; remove unsupported options.")
+            raise ValueError(
+                "SPDZ2k uses malicious security with abort and does not support dropout recovery"
+            )
         selected_count = max(1, int(clients * fraction))
-        effective_committee = min(committee, parties)
         if selected_count < minimum:
             raise ValueError("client fraction is too low for smpc.min_clients_per_round")
-        if selected_count * effective_committee < 2 * parties:
-            raise ValueError(
-                "committee configuration must route each aggregation party shares from "
-                "at least two selected clients per round"
-            )
 
     compromised_fraction = float(config.get("attacks", {}).get("compromised_fraction", 0.0))
     if not 0 <= compromised_fraction <= 1:

@@ -17,7 +17,7 @@ class TestIntegration(unittest.TestCase):
         model = CIFAR10CNN()
         config = {
             "experiment": {"seed": 42},
-            "mtd": {"enabled": True, "selection_strategy": "random", "committee_size": 2}
+            "mtd": {"enabled": True, "selection_strategy": "random"}
         }
         controller = MTDController(config)
         round_cfg = controller.generate_round_config(1, num_clients=3, fraction=1.0)

@@ -16,8 +16,6 @@ federated_learning:
 mtd:
   enabled: true
   selection_strategy: random
-  committee_assignment: randomized
-  committee_size: 3
   change_every_round: true
 
 smpc:

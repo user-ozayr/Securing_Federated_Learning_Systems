@@ -7,7 +7,7 @@ class TestMTDExecution(unittest.TestCase):
         """Verify that selected clients vary between rounds when MTD is enabled (random strategy)."""
         config = {
             "experiment": {"seed": 42},
-            "mtd": {"enabled": True, "selection_strategy": "random", "committee_size": 3}
+            "mtd": {"enabled": True, "selection_strategy": "random"}
         }
         controller = MTDController(config)
         num_clients = 20
@@ -21,7 +21,6 @@ class TestMTDExecution(unittest.TestCase):
         
         print(f"\n[MTD Log] Round 1 selected clients: {clients_r1}")
         print(f"[MTD Log] Round 2 selected clients: {clients_r2}")
-        print(f"[MTD Log] Round 1 committees: {round_1_cfg['committees']}")
         
         # Verify participation count matches fraction
         expected_count = int(num_clients * fraction)

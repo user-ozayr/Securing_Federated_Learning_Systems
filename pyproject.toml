@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fl_security"
 version = "0.3.0"
-description = "Flower research simulation with MTD and client-side additive secret sharing"
+description = "Flower research simulation with MTD and malicious-secure MP-SPDZ SPDZ2k aggregation"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -27,3 +27,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+fl_security = ["smpc/programs/*.mpc"]
