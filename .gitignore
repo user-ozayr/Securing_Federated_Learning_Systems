@@ -15,7 +15,7 @@ dist/
 # Local datasets and generated experiment outputs
 data/
 results/
-experiments/
+/experiments/
 
 # Keep selected research evidence, including CSV metrics
 !research_output/

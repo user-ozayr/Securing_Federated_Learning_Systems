@@ -1,0 +1,273 @@
+# Robust secure aggregation for federated learning (MP-SPDZ v0.4.3, SPDZ2k, -R 64).
+#
+# Clients submit [sample_count, x_1 .. x_d, zero padding] in fixed-size chunks,
+# where x_j = round(delta_j * 2^f) is the client's model update (not weighted).
+# All arithmetic is exact integer arithmetic in Z_2^64; there is no fixed-point
+# truncation inside MPC. Per client k (public integer weight w_k):
+#
+#   R_k = sum_j x_kj^2                    squared update norm (d multiplications)
+#   S_k = w_k^2 * R_k                     squared norm of the visible contribution w_k*x_k
+#   valid_k = 0 <= S_k <= w_k^2 * r_max   malformed / absurdly large inputs are excluded
+#
+# Threshold T (squared norm, units 2^(2f)): public, or adaptive
+#   T = clamp(lambda2 * lower_median(R'), t_min, t_max)  with R' = R (valid) or r_max.
+# Screening:  a_k = valid_k and S_k <= rho2 * w_k^2 * T          (decision revealed)
+# Clipping:   C_k = 2^g if S_k <= w_k^2 * T, else the largest integer c < 2^g with
+#             c^2 * S_k <= 2^(2g) * w_k^2 * T                      (C_k stays secret)
+# Aggregate:  A_j = sum_k a_k * C_k * w_k * x_kj   (C_k = 2^g when clipping is off)
+#
+# Every comparison is made on the squared norm of the contribution that actually
+# enters the sum, which equals that contribution's true squared norm modulo 2^64.
+# The Python coordinator validates the bit budget that keeps honest values below
+# 2^62 and performs the plaintext output-norm check described in
+# docs/secure_robust_aggregation.md. The output client receives only:
+#   [threshold T, clipped count, a_1..a_K, clip_flag_1..clip_flag_K, A_1..A_d].
+from Compiler.types import Array, Matrix, regint, sint
+from Compiler.library import for_range, if_
+
+program.active = True
+
+
+def _ints(text):
+    return [int(value) for value in text.split(",")] if text else []
+
+
+# The party service prepends a validated ROUND_ARGUMENTS literal so that the
+# bytecode name stays short; the bytecode hash still binds every argument.
+# Standalone compilation may pass the same eight strings as compiler arguments.
+try:
+    round_arguments = list(ROUND_ARGUMENTS)
+except NameError:
+    round_arguments = list(program.args[1:])
+if len(round_arguments) != 8:
+    raise ValueError("robust secure aggregation expects eight round arguments")
+
+selected_ids = _ints(round_arguments[0])
+expected_counts = _ints(round_arguments[1])
+weights = _ints(round_arguments[2])
+input_count = int(round_arguments[3])
+output_client_id = int(round_arguments[4])
+client_port_base = int(round_arguments[5])
+chunk_size = int(round_arguments[6])
+spec = _ints(round_arguments[7])
+if len(spec) != 13:
+    raise ValueError("robust aggregation specification must contain 13 integers")
+(
+    clip_enabled,
+    screen_enabled,
+    adaptive,
+    static_t,
+    t_min,
+    t_max,
+    lambda2,
+    rho2,
+    clip_bits,
+    r_max,
+    reveal_flags,
+    max_weight_bits,
+    options,
+) = spec
+
+# options bit 0: generate comparison randomness with edaBits (Escudero et al.,
+# CRYPTO 2020). This changes only preprocessing, not the computed function.
+if options not in (0, 1):
+    raise ValueError("unsupported robust aggregation options")
+if options & 1:
+    program.use_edabit(True)
+
+client_count = len(selected_ids)
+dimension = input_count - 1
+if (
+    client_count < 2
+    or len(expected_counts) != client_count
+    or len(weights) != client_count
+    or any(count <= 0 for count in expected_counts)
+    or any(weight <= 0 or weight > (1 << max_weight_bits) for weight in weights)
+    or len(set(selected_ids)) != client_count
+    or dimension < 1
+    or output_client_id in selected_ids
+    or chunk_size <= 0
+    or clip_enabled not in (0, 1)
+    or screen_enabled not in (0, 1)
+    or adaptive not in (0, 1)
+    or reveal_flags not in (0, 1)
+    or clip_enabled + screen_enabled == 0
+    or not 1 <= clip_bits <= 16
+    or not 0 < t_min <= t_max <= r_max
+    or not 0 < static_t <= r_max
+    or lambda2 <= 0
+    or rho2 <= 0
+    or r_max >= (1 << 62)
+):
+    raise ValueError("invalid robust secure aggregation arguments")
+
+one_g = 1 << clip_bits
+max_weight_squared = max(weights) ** 2
+# Bit budget: every product compared below must stay below 2^62 for valid inputs.
+if (
+    r_max * max_weight_squared * one_g * one_g >= (1 << 62)
+    or r_max * lambda2 >= (1 << 62)
+    or t_max * max_weight_squared * one_g * one_g >= (1 << 62)
+    or t_max * max_weight_squared * rho2 >= (1 << 62)
+    or static_t * max_weight_squared * rho2 >= (1 << 62)
+):
+    raise ValueError("robust secure aggregation parameters exceed the 2^62 bit budget")
+
+num_chunks = (input_count + chunk_size - 1) // chunk_size
+padded_count = num_chunks * chunk_size
+max_client_id = max(selected_ids + [output_client_id])
+
+listen_for_clients(client_port_base)
+inputs = sint.Matrix(client_count, padded_count)
+seen = Array(max_client_id + 1, regint)
+seen.assign_all(0)
+
+# ---- authenticated private input from every selected client --------------------
+for _ in range(client_count):
+    client_id = accept_client_connection(client_port_base)
+
+    @if_(client_id < 0)
+    def _():
+        crash()
+
+    @if_(client_id > max_client_id)
+    def _():
+        crash()
+
+    is_selected = regint(0)
+    position = regint(0)
+    expected_count = regint(0)
+    for index, selected_id in enumerate(selected_ids):
+        match = client_id == selected_id
+        is_selected += match
+        position += match * index
+        expected_count += match * expected_counts[index]
+
+    @if_(is_selected != 1)
+    def _():
+        crash()
+
+    @if_(seen[client_id] != 0)
+    def _():
+        crash()
+
+    seen[client_id] = 1
+    row = inputs[position]
+
+    @for_range(num_chunks)
+    def _(chunk_index):
+        values = Array.create_from(sint.receive_from_client(chunk_size, client_id))
+        base = chunk_index * chunk_size
+
+        @for_range(chunk_size)
+        def _(offset):
+            row[base + offset] = values[offset]
+
+    count_mismatch = (row[0] != expected_count).reveal()
+
+    @if_(count_mismatch)
+    def _():
+        crash()
+
+    closeclientconnection(client_id)
+
+# ---- per-client squared norms of the visible contribution --------------------
+squared = []
+visible = []
+valid = []
+for k in range(client_count):
+    vector = inputs[k].get_vector(1, dimension)
+    r_k = sint.dot_product(vector, vector)
+    s_k = r_k * (weights[k] * weights[k])
+    ok = (s_k >= 0) * (s_k <= r_max * weights[k] * weights[k])
+    squared.append(r_k)
+    visible.append(s_k)
+    valid.append(ok)
+
+# ---- threshold -----------------------------------------------------------------
+if adaptive:
+    keyed = [v * (r - r_max) + r_max for r, v in zip(squared, valid)]
+    # odd-even transposition sort (client_count is small)
+    for phase in range(client_count):
+        for first in range(phase % 2, client_count - 1, 2):
+            low, high = keyed[first], keyed[first + 1]
+            swap = high < low
+            delta = swap * (high - low)
+            keyed[first] = low + delta
+            keyed[first + 1] = high - delta
+    median = keyed[(client_count - 1) // 2]
+    raw = median * lambda2
+    below = raw < t_min
+    raw = below * (t_min - raw) + raw
+    above = raw > t_max
+    threshold = above * (t_max - raw) + raw
+else:
+    threshold = sint(static_t)
+
+# ---- screening and clipping ------------------------------------------------------
+accept = []
+coefficient = []
+clipped = []
+for k in range(client_count):
+    w2 = weights[k] * weights[k]
+    s_k = visible[k]
+    bound = threshold * w2
+    if screen_enabled:
+        a_k = valid[k] * (s_k <= bound * rho2)
+    else:
+        a_k = valid[k]
+    if clip_enabled:
+        not_clipped = s_k <= bound
+        low = sint(0)
+        for bit in reversed(range(clip_bits)):
+            candidate = low + (1 << bit)
+            fits = (candidate * candidate) * s_k <= bound * (one_g * one_g)
+            low = low + fits * (1 << bit)
+        c_k = not_clipped * (one_g - low) + low
+        clipped.append(valid[k] * (1 - not_clipped))
+    else:
+        c_k = sint(one_g)
+        clipped.append(sint(0))
+    accept.append(a_k)
+    coefficient.append(c_k)
+
+accept_clear = [a_k.reveal() for a_k in accept]
+
+totals = sint.Array(dimension)
+totals.assign_all(0)
+for k in range(client_count):
+    @if_(accept_clear[k])
+    def _():
+        vector = inputs[k].get_vector(1, dimension)
+        if clip_enabled:
+            scale = coefficient[k] * weights[k]
+            totals.assign_vector(totals.get_vector() + vector * scale.expand_to_vector(dimension))
+        else:
+            totals.assign_vector(totals.get_vector() + vector * (one_g * weights[k]))
+
+header = 2 + 2 * client_count
+result = sint.Array(header + dimension)
+if adaptive:
+    result[0] = threshold
+else:
+    result[0] = sint(static_t)
+clipped_count = sint(0)
+for k in range(client_count):
+    clipped_count += clipped[k] * accept[k]
+result[1] = clipped_count
+for k in range(client_count):
+    result[2 + k] = accept[k]
+    if reveal_flags:
+        result[2 + client_count + k] = clipped[k] * accept[k]
+    else:
+        result[2 + client_count + k] = sint(0)
+result.assign(totals, header)
+
+output_socket = accept_client_connection(client_port_base)
+
+@if_(output_socket != output_client_id)
+def _():
+    crash()
+
+result.reveal_to_clients([output_socket])
+closeclientconnection(output_socket)

@@ -22,7 +22,25 @@ MAX_CONTROL_BODY = 64 * 1024
 CONTROL_CLOCK_SKEW_SECONDS = 300
 ROUND_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 REQUEST_ID_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+WEIGHTED_SUM_PROGRAM = "weighted_sum"
+ROBUST_PROGRAM = "robust_aggregate"
+PROGRAM_SOURCES = {
+    WEIGHTED_SUM_PROGRAM: "spdz2k_weighted_sum.mpc",
+    ROBUST_PROGRAM: "spdz2k_robust_aggregate.mpc",
+}
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ProgramIdentity:
+    program_base: str
+    program_name: str
+    args: list[str]
+    kind: str = WEIGHTED_SUM_PROGRAM
+
+    def __iter__(self):
+        """Backward-compatible ``base, name, args = identity`` unpacking."""
+        return iter((self.program_base, self.program_name, self.args))
 
 
 @dataclass
@@ -188,11 +206,21 @@ class MPSpdzPartyService:
         if not 30 <= self.round_timeout <= 86_400:
             raise ValueError("round timeout must be between 30 and 86400 seconds")
 
-    def _program_identity(
-        self, round_id: str, payload: dict
-    ) -> tuple[str, str, list[str]]:
+    def _program_identity(self, round_id: str, payload: dict) -> ProgramIdentity:
         if not ROUND_ID_PATTERN.fullmatch(round_id):
             raise ValueError("round ID contains invalid characters")
+        kind = payload.get("program", WEIGHTED_SUM_PROGRAM)
+        if kind not in PROGRAM_SOURCES:
+            raise ValueError("unsupported SPDZ2k program")
+        allowed = {
+            "client_ids", "input_count", "expected_counts", "output_client_id",
+            "client_port_base", "program",
+        }
+        if kind == ROBUST_PROGRAM:
+            allowed |= {"weights", "robust_spec", "chunk_size"}
+        unknown = set(payload) - allowed
+        if unknown:
+            raise ValueError(f"unexpected SPDZ2k round fields: {sorted(unknown)}")
         clients = payload.get("client_ids")
         input_count = payload.get("input_count")
         expected_counts = payload.get("expected_counts")
@@ -231,6 +259,32 @@ class MPSpdzPartyService:
         if max(clients + [output_client_id]) > 65_535:
             raise ValueError("client IDs must not exceed 65535")
 
+        program_base = "fl_spdz_" + hashlib.sha256(round_id.encode()).hexdigest()[:20]
+        if kind == ROBUST_PROGRAM:
+            from fl_security.smpc.robust import round_arguments, validate_spec
+
+            weights = payload.get("weights")
+            spec = payload.get("robust_spec")
+            chunk_size = payload.get("chunk_size")
+            if (
+                not isinstance(weights, list)
+                or len(weights) != len(clients)
+                or any(isinstance(w, bool) or not isinstance(w, int) or not 0 < w <= 65_535 for w in weights)
+            ):
+                raise ValueError("weights must contain one positive integer per client")
+            if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or not 16 <= chunk_size <= 4096:
+                raise ValueError("chunk_size must be an integer in [16, 4096]")
+            if not isinstance(spec, list):
+                raise ValueError("robust_spec must be a list of integers")
+            if len(clients) < 2 or input_count < 2:
+                raise ValueError("robust aggregation requires two clients and one parameter")
+            validate_spec(spec, weights)
+            args = round_arguments(
+                clients, expected_counts, weights, input_count,
+                output_client_id, port_base, chunk_size, spec,
+            )
+            return ProgramIdentity(program_base, program_base, args, ROBUST_PROGRAM)
+
         args = [
             ",".join(str(client_id) for client_id in sorted(clients)),
             ",".join(str(count) for _, count in sorted(zip(clients, expected_counts))),
@@ -238,26 +292,30 @@ class MPSpdzPartyService:
             str(output_client_id),
             str(port_base),
         ]
-        program_base = "fl_spdz_" + hashlib.sha256(round_id.encode()).hexdigest()[:20]
         program_name = program_base + "-" + "-".join(args)
-        return program_base, program_name, args
+        return ProgramIdentity(program_base, program_name, args, WEIGHTED_SUM_PROGRAM)
 
-    def _compile(self, program_base: str, args: list[str], program_name: str) -> str:
+    def _compile(self, identity: ProgramIdentity) -> str:
         if sys.platform != "linux":
             raise RuntimeError("SPDZ2k circuit compilation requires Linux")
         import fcntl
 
+        program_base, program_name = identity.program_base, identity.program_name
         lock_path = self.mp_home / ".fl-spdz2k-compile.lock"
         lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
-            source = (
-                Path(__file__).parent
-                / "programs"
-                / "spdz2k_weighted_sum.mpc"
-            )
+            source = Path(__file__).parent / "programs" / PROGRAM_SOURCES[identity.kind]
             target = self.mp_home / "Programs" / "Source" / f"{program_base}.mpc"
-            shutil.copyfile(source, target)
+            if identity.kind == ROBUST_PROGRAM:
+                # Arguments were validated above and contain only digits and commas;
+                # embedding them keeps the bytecode name short and hash-bound.
+                header = "ROUND_ARGUMENTS = " + json.dumps(identity.args) + "\n"
+                target.write_text(header + source.read_text(encoding="utf-8"), encoding="utf-8")
+                compile_args: list[str] = []
+            else:
+                shutil.copyfile(source, target)
+                compile_args = list(identity.args)
             try:
                 result = subprocess.run(
                     [
@@ -269,7 +327,7 @@ class MPSpdzPartyService:
                         # Array accesses used by chunked aggregation (compiler -M).
                         "-M",
                         program_base,
-                        *args,
+                        *compile_args,
                     ],
                     cwd=self.mp_home,
                     capture_output=True,
@@ -301,7 +359,8 @@ class MPSpdzPartyService:
                 raise RuntimeError("this SPDZ2k party already has an active round")
             if round_id in self.seen_round_ids:
                 raise RuntimeError("SPDZ2k round ID has already been used")
-            program_base, program_name, args = self._program_identity(round_id, payload)
+            identity = self._program_identity(round_id, payload)
+            program_base, program_name = identity.program_base, identity.program_name
             self.round_metadata[round_id] = (program_base, program_name)
             self.seen_rounds_path.parent.mkdir(parents=True, exist_ok=True)
             with self.seen_rounds_path.open("a", encoding="utf-8") as journal:
@@ -310,7 +369,7 @@ class MPSpdzPartyService:
                 os.fsync(journal.fileno())
             self.seen_round_ids.add(round_id)
 
-            program_hash = self._compile(program_base, args, program_name)
+            program_hash = self._compile(identity)
             log_dir = self.work_dir / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             log_path = log_dir / f"{program_base}-P{self.party_id}.log"
@@ -370,6 +429,22 @@ class MPSpdzPartyService:
                 time.sleep(0.05)
             return {"status": "running", "program_sha256": program_hash}
 
+    @staticmethod
+    def _protocol_statistics(text: str) -> dict:
+        """Parse MP-SPDZ's end-of-run summary (measured by the party binary)."""
+        stats: dict[str, float] = {}
+        patterns = {
+            "protocol_seconds": r"^Time = ([0-9.eE+-]+) seconds",
+            "party_data_sent_mb": r"^Data sent = ([0-9.eE+-]+) MB",
+            "party_rounds": r"^Data sent = [0-9.eE+-]+ MB in ~([0-9]+) rounds",
+            "global_data_sent_mb": r"^Global data sent = ([0-9.eE+-]+) MB",
+        }
+        for key, pattern in patterns.items():
+            match = re.search(pattern, text, flags=re.MULTILINE)
+            if match:
+                stats[key] = float(match.group(1))
+        return stats
+
     def _read_log_tail(self, path: Path) -> str:
         try:
             with path.open("rb") as log:
@@ -410,7 +485,13 @@ class MPSpdzPartyService:
             current.timeout.cancel()
             current.log_file.flush()
             if exit_code == 0:
-                return {"status": "completed", "exit_code": 0}
+                return {
+                    "status": "completed",
+                    "exit_code": 0,
+                    "statistics": self._protocol_statistics(
+                        self._read_log_tail(current.log_path)
+                    ),
+                }
             return {
                 "status": "failed",
                 "exit_code": exit_code,
@@ -456,9 +537,13 @@ class MPSpdzPartyService:
             (self.mp_home / "Programs" / "Schedules" / f"{program_name}.sch").unlink(
                 missing_ok=True
             )
-            (self.mp_home / "Programs" / "Bytecode" / f"{program_name}-0.bc").unlink(
-                missing_ok=True
-            )
+            # Remove the main tape and every auxiliary tape of this round (for
+            # example EQZ/LTZ function tapes); earlier versions removed only -0.bc.
+            bytecode_dir = self.mp_home / "Programs" / "Bytecode"
+            prefix = f"{program_name}-"
+            for tape in bytecode_dir.iterdir() if bytecode_dir.is_dir() else []:
+                if tape.name.startswith(prefix) and tape.name.endswith(".bc"):
+                    tape.unlink(missing_ok=True)
             del self.round_metadata[round_id]
             return {"status": "cleaned"}
 
@@ -568,7 +653,10 @@ def serve_party(
     client_port_base: int,
     control_token: str,
     round_timeout: int = 600,
+    startup_timeout: float = 2.0,
 ) -> None:
+    if not 0.1 <= float(startup_timeout) <= 30.0:
+        raise ValueError("startup_timeout must be between 0.1 and 30 seconds")
     service = MPSpdzPartyService(
         mp_spdz_home=mp_spdz_home,
         work_dir=work_dir,
@@ -578,6 +666,7 @@ def serve_party(
         client_port_base=client_port_base,
         control_token=control_token,
         round_timeout=round_timeout,
+        startup_timeout=float(startup_timeout),
     )
 
     def handle_shutdown(signum, frame):
