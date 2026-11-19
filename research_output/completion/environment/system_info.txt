@@ -1,0 +1,15 @@
+Captured (UTC): 2026-11-19T23:28:31Z
+Hostname: oracle-vnic-3
+Kernel: Linux 7.0.0-1016-oracle #18-Ubuntu SMP PREEMPT Wed Oct 28 15:40:18 UTC 2026 aarch64 GNU/Linux
+PRETTY_NAME="Ubuntu 26.04 LTS"
+VERSION="26.04 LTS (Resolute Raccoon)"
+CPU: 3 vCPU; CPU part	: 0xd0c; Architecture: aarch64;Model name: Neoverse-N1
+Memory:
+               total        used        free      shared  buff/cache   available
+Mem:            17Gi       6.9Gi       5.6Gi       197Mi       5.5Gi        10Gi
+Swap:             0B          0B          0B
+Disk:
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        45G   36G  8.8G  81% /
+GPU: none
+Note: all MPC parties, clients and the coordinator run on this single host (loopback networking).

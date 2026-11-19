@@ -232,7 +232,9 @@ def e4_sweeps() -> list[RunSpec]:
 def e5_noniid() -> list[RunSpec]:
     runs = []
     extra = {"federated_learning": {"partitioning": "dirichlet", "dirichlet_alpha": 0.5}}
-    weighted = {"smpc": {"defence": {"weighting": "sample", "weight_bits": 3}}}
+    # Sample weights enlarge sum(w); clip_bits 6 and 2-bit weights keep the
+    # output-check margin 2^31 / (2^(g+f) * sum(w)) >= 2 * margin * max_norm.
+    weighted = {"smpc": {"defence": {"weighting": "sample", "weight_bits": 2, "clip_bits": 6}}}
     for seed_index, seed in enumerate(SEEDS[:2]):
         for attack_index, attack in enumerate(("none", "backdoor")):
             runs.append(make_run("e5", "baseline", attack, seed, (4, seed_index, 0, 0, attack_index),

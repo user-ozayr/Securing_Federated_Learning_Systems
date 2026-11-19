@@ -2,7 +2,15 @@
 
 Research prototype for horizontal federated learning, Moving Target Defence
 (MTD), poisoning experiments, and secure aggregation using MP-SPDZ v0.4.3
-with the SPDZ2k protocol.
+with the SPDZ2k protocol – including an integrity defence that runs **inside**
+the secure computation (per-client L2 clipping and norm screening with an
+adaptive, median-based threshold; see `docs/secure_robust_aggregation.md`).
+
+Entry points: `run_experiment.py` (one run), `run_suite.py` (evaluation grid),
+`analyze_suite.py` (tables/figures), `run_mpc_validation.py` (SPDZ2k vs exact
+reference), `run_mpc_benchmark.py` (SPDZ2k cost), `run_mtd_exposure.py`
+(schedule predictability). Setup and reproduction: `docs/reproduction.md`.
+Completion evidence and reports: `research_output/completion/`.
 
 ## Requirements and local demonstration
 
@@ -110,11 +118,21 @@ integration tests; do not treat the local demonstration as that validation.
    stops the parties and requests cleanup. There is no additive-sharing or
    plaintext fallback in an SMPC-enabled run.
 
+With `smpc.defence.enabled: true` the round uses
+`spdz2k_robust_aggregate.mpc` instead: clients submit their update
+`w_local − w_global` at scale `2^f`; inside SPDZ2k the parties compute each
+client's squared norm, an optional lower-median threshold, screening (revealed
+accept bit) and/or clipping with secret coefficients, and reveal only the
+clipped weighted sum, the threshold and declared flags. The coordinator checks
+the aggregate norm before applying the update; a failed check keeps the
+previous model (only possible with malformed, wrapping inputs).
+
 Non-SMPC configurations explicitly use ordinary sample-weighted FedAvg and
-send client model arrays to the coordinator. Individual-update robust
-aggregation is supported only in this plaintext mode; enabling it together
-with SPDZ2k is rejected because per-client scoring is not implemented inside
-MPC.
+send client model arrays to the coordinator. The plaintext detector
+(`defences.robust_aggregation`) and the plaintext execution of the norm defence
+(`defences.norm_defence_reference`) are baselines for comparison only; the
+plaintext detector cannot be combined with SPDZ2k because its per-client scoring
+needs individual updates.
 
 ## MTD randomness
 
@@ -147,25 +165,30 @@ Small-cohort aggregates can reveal information, especially to observers who
 already know other participants' updates; the configured minimum cohort is
 not differential privacy. A malicious client can submit a poisoning update:
 SPDZ2k protects the computation, not whether local training or the submitted
-update is honest. There is no enforceable MPC-side contribution clipping, no range proof,
-differential privacy, backdoor attack-success measurement, or membership-inference
-protection. Client-side clipping would not enforce a bound against a malicious
-client and is not used.
+update is honest. The optional in-MPC defence bounds each accepted client's
+contribution (clipping/screening); it does not remove poisoning whose update
+looks honest in magnitude, and colluding clients that deviate from the encoding
+can exceed the per-client bound (the output check still bounds the applied
+update). There are no per-coordinate range proofs, no differential privacy and
+no membership-inference protection. Client-side clipping would not enforce a
+bound against a malicious client and is not used.
 
 See [docs/threat-model.md](docs/threat-model.md) for the trust boundaries,
 assumptions, and out-of-scope threats.
 
 ## Reproducible evaluation
 
-Run the baseline, MTD-only, SPDZ2k-only, and hybrid configurations separately
-with matching experiment seeds, and use distinct output directories for each
-condition. The paired multi-condition benchmark runner is available as `run_benchmark.py`.
-It has not yet been used to complete the multi-seed comparison matrix. Use at
-least five seeds for a future comparison and more when compute allows. Report clean test accuracy and loss, malicious client
-participation, paired differences, aggregation time, party count, and
-application-level SPDZ2k input bytes. These byte counts exclude transport
-framing and retries; they are not total network traffic. Do not report
-backdoor attack-success rates from clean test accuracy.
+The completion evaluation is defined in `src/fl_security/experiments/grid.py`
+(Fashion-MNIST, 2,202-parameter CNN, 12 clients, 4 per round, 3 seeds; six core
+configurations from FedAvg to SPDZ2k + secure defence + MTD; six attack
+scenarios including a trigger backdoor with attack-success rate; adaptive,
+MTD-predictability, sweep and non-IID studies). Run it with `run_suite.py`
+(resumable, one process per run) and aggregate with `analyze_suite.py`.
+Per-round CSVs report clean accuracy and loss, backdoor ASR, malicious
+participation, defence decisions, round time, MP-SPDZ-measured protocol time and
+global traffic, and application-level input bytes. Methodology:
+`docs/experimental_methodology.md`. The older paired runner `run_benchmark.py`
+remains available.
 
 The historical learning rate of 0.1 caused non-finite local weights in the
 five-client CIFAR-10 setup. Use `configs/benchmark_lr001/` for the stabilized
@@ -181,6 +204,5 @@ or `@`) while preserving numeric values.
 The optional plaintext robust-update module scores client updates using
 distance from the cohort median, cosine alignment, update norm, and temporal
 consistency. It is a research integrity layer, not a poisoning guarantee, and
-is unavailable with the sum-only SPDZ2k circuit. Differential privacy,
-backdoor attack-success rate, membership inference, property inference, and
-gradient inversion are outside the current evaluation.
+is unavailable with SPDZ2k. Differential privacy, membership inference,
+property inference, and gradient inversion are outside the current evaluation.

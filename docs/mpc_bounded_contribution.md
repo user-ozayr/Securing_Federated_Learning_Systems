@@ -1,4 +1,6 @@
-﻿# MPC Bounded-Contribution Defense: feasibility assessment
+> **Superseded (2026-11-20).** This document records an earlier decision and is kept unchanged below for traceability. An integer-only in-MPC norm defence (clipping and screening with a constant number of comparisons per client) is now implemented in `src/fl_security/smpc/programs/spdz2k_robust_aggregate.mpc`; see `docs/secure_robust_aggregation.md` and `research_output/completion/`. Coordinate-wise clipping remains unimplemented for the cost reasons given below.
+
+# MPC Bounded-Contribution Defense: feasibility assessment
 
 ## Status
 
