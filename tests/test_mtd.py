@@ -12,19 +12,18 @@ class TestMTD(unittest.TestCase):
         self.assertEqual(selected_1, selected_2)
 
     def test_controller_generation(self):
-        """Verify that MTD controller generates valid round configurations and committees."""
+        """Verify that MTD controller generates valid client-selection rounds."""
         config = {
             "experiment": {"seed": 42},
-            "mtd": {"enabled": True, "selection_strategy": "random", "committee_size": 3}
+            "mtd": {"enabled": True, "selection_strategy": "random"}
         }
         controller = MTDController(config)
         round_cfg = controller.generate_round_config(1, num_clients=10, fraction=0.4)
         
         self.assertIn("selected_clients", round_cfg)
-        self.assertIn("committees", round_cfg)
+        self.assertNotIn("committees", round_cfg)
         self.assertEqual(len(round_cfg["selected_clients"]), 4)
         self.assertEqual(round_cfg["round"], 1)
 
 if __name__ == '__main__':
     unittest.main()
-
