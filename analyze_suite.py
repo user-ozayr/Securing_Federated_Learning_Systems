@@ -19,7 +19,25 @@ def main() -> None:
     parser.add_argument("--root", required=True)
     parser.add_argument("--benchmarks", default=None)
     parser.add_argument("--manifest", default=None, help="write a SHA-256 manifest of this directory")
+    parser.add_argument("--reanalyze", action="store_true",
+                        help="recompute round_analysis.csv of every completed run from instrumentation.npz")
     args = parser.parse_args()
+    if args.reanalyze:
+        import yaml
+
+        from fl_security.experiments.analysis import reanalyze_packed
+
+        count = 0
+        for meta_path in sorted(Path(args.root).glob("runs/*/*/run_metadata.json")):
+            run_dir = meta_path.parent
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if meta.get("status") != "completed" or not (run_dir / "instrumentation.npz").exists():
+                continue
+            config = yaml.safe_load((run_dir / "config.yaml").read_text(encoding="utf-8"))
+            meta["reanalysis"] = reanalyze_packed(run_dir, config)
+            meta_path.write_text(json.dumps(meta, indent=2, default=str), encoding="utf-8")
+            count += 1
+        print(f"re-analysed {count} runs")
     print(json.dumps(build_reports(Path(args.root)), indent=2))
     if args.benchmarks:
         summary = benchmark_report(Path(args.benchmarks))

@@ -19,6 +19,51 @@ from fl_security.smpc.robust import (
 )
 
 
+def test_simulation_abort_keeps_completed_rounds_and_reraises(monkeypatch, tmp_path):
+    torch.set_num_threads(1)
+    images = torch.randn(8, 1, 28, 28, generator=torch.Generator().manual_seed(1))
+    labels = torch.arange(8) % 10
+    data = TensorDataset(images, labels)
+    monkeypatch.setattr(flower_runner, "load_dataset", lambda name, root=None: (data, data))
+    monkeypatch.setattr(flower_runner, "partition_data",
+                        lambda *a, **k: [TensorDataset(images[i * 4:(i + 1) * 4], labels[i * 4:(i + 1) * 4])
+                                         for i in range(2)])
+    monkeypatch.delenv("FL_MTD_SECRET", raising=False)
+
+    def scheduler(client_fn, num_clients, config, strategy, **kwargs):
+        proxies = {str(cid): SimpleNamespace(cid=str(cid)) for cid in range(num_clients)}
+        manager = SimpleNamespace(all=lambda: proxies)
+        parameters = strategy.initialize_parameters(manager)
+        strategy.evaluate(0, parameters)
+        instructions = strategy.configure_fit(1, parameters, manager)
+        results = [(proxy, client_fn(proxy.cid).fit(ins)) for proxy, ins in instructions]
+        parameters, _ = strategy.aggregate_fit(1, results, [])
+        strategy.evaluate(1, parameters)
+        try:
+            raise OverflowError("weighted model tensor exceeds the safe SPDZ2k ring range")
+        except OverflowError as exc:
+            raise RuntimeError("Simulation crashed.") from exc
+
+    monkeypatch.setattr(flwr.simulation, "start_simulation", scheduler)
+    config = {
+        "experiment": {"name": "abort_path", "seed": 3, "rounds": 5},
+        "federated_learning": {"framework": "flower", "dataset": "fashion_mnist", "model": "compact_cnn",
+                               "num_clients": 2, "fraction_train": 1.0, "local_epochs": 1,
+                               "batch_size": 2, "learning_rate": 0.01, "partitioning": "iid"},
+        "mtd": {"schedule": "static"},
+        "smpc": {"enabled": False},
+        "attacks": {"enabled": False},
+        "evaluation": {"output_dir": str(tmp_path), "save_csv": True, "save_plots": False},
+    }
+    with pytest.raises(RuntimeError, match="Simulation crashed"):
+        flower_runner.run_flower_simulation(config)
+    frame = pd.read_csv(tmp_path / "abort_path_results.csv")
+    assert list(frame["round"]) == [0, 1]
+    abort = json.loads((tmp_path / "abort_path_abort.json").read_text())
+    assert abort["rounds_completed"] == 1 and abort["rounds_configured"] == 5
+    assert abort["cause_type"] == "OverflowError"
+
+
 def test_robust_strategy_applies_reference_decoded_update(monkeypatch, tmp_path):
     torch.set_num_threads(1)
     generator = torch.Generator().manual_seed(0)

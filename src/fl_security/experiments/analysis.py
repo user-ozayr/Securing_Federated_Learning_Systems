@@ -86,21 +86,77 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
     if instrumentation is None:
         return summary
 
+    rounds_data: dict[int, tuple[list, list, list, list]] = {}
+    for path in sorted(instrumentation.glob("r*_c*.npz")):
+        data = np.load(path)
+        ids, deltas, flags, counts = rounds_data.setdefault(int(path.name[1:5]), ([], [], [], []))
+        ids.append(int(path.name.split("_c")[1][:4]))
+        deltas.append(data["delta"].astype(np.float64))
+        flags.append(bool(data["malicious"]))
+        counts.append(int(data["num_examples"]))
+    globals_ = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_global.npy")}
+    summary.update(_summarize_rows(run_dir, _round_rows(rounds_data, globals_, config)))
+    # Pack the per-client files into one archive (raw evidence) and remove them.
+    arrays = {}
+    for path in sorted(instrumentation.iterdir()):
+        if path.suffix == ".npz":
+            data = np.load(path)
+            for key in data.files:
+                arrays[f"{path.stem}__{key}"] = data[key]
+        elif path.suffix == ".npy":
+            arrays[path.stem] = np.load(path)
+    np.savez_compressed(run_dir / "instrumentation.npz", **arrays)
+    shutil.rmtree(instrumentation)
+    return summary
+
+
+def reanalyze_packed(run_dir: Path, config: dict) -> dict:
+    """Recompute round_analysis.csv from a packed instrumentation.npz."""
+    run_dir = Path(run_dir)
+    packed = load_instrumentation(run_dir / "instrumentation.npz")
+    rounds_data: dict[int, tuple[list, list, list, list]] = {}
+    globals_ = {}
+    for key, value in packed.items():
+        if key.endswith("_global"):
+            globals_[int(key[1:5])] = value
+        elif key.endswith("__delta"):
+            stem = key[: -len("__delta")]
+            ids, deltas, flags, counts = rounds_data.setdefault(int(stem[1:5]), ([], [], [], []))
+            ids.append(int(stem.split("_c")[1][:4]))
+            deltas.append(value.astype(np.float64))
+            flags.append(bool(packed[f"{stem}__malicious"]))
+            counts.append(int(packed[f"{stem}__num_examples"]))
+    for ids, deltas, flags, counts in rounds_data.values():
+        order = sorted(range(len(ids)), key=lambda i: ids[i])
+        for values in (ids, deltas, flags, counts):
+            values[:] = [values[i] for i in order]
+    return _summarize_rows(run_dir, _round_rows(rounds_data, globals_, config))
+
+
+def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
+    summary: dict = {}
+    if rows:
+        table = pd.DataFrame(rows)
+        table.to_csv(run_dir / "round_analysis.csv", index=False)
+        for column in ("deviation_from_honest_relative", "malicious_share_effective",
+                       "malicious_share_submitted", "reference_max_abs_error",
+                       "reference_relative_error"):
+            if column in table:
+                values = table[column].dropna()
+                if len(values):
+                    summary[f"mean_{column}"] = float(values.mean())
+                    if column.startswith("reference_"):
+                        summary[f"max_{column}"] = float(values.max())
+    return summary
+
+
+def _round_rows(rounds_data: dict, globals_: dict, config: dict) -> list[dict]:
     defence = _defence(config)
     smpc = config.get("smpc", {}) or {}
     sum_only = bool(smpc.get("enabled")) and defence is None
     rows = []
-    rounds = sorted({int(p.name[1:5]) for p in instrumentation.glob("r*_c*.npz")})
-    globals_ = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_global.npy")}
-    for round_num in rounds:
-        files = sorted(instrumentation.glob(f"r{round_num:04d}_c*.npz"))
-        ids, deltas, flags, counts = [], [], [], []
-        for path in files:
-            data = np.load(path)
-            ids.append(int(path.name.split("_c")[1][:4]))
-            deltas.append(data["delta"].astype(np.float64))
-            flags.append(bool(data["malicious"]))
-            counts.append(int(data["num_examples"]))
+    for round_num in sorted(rounds_data):
+        ids, deltas, flags, counts = rounds_data[round_num]
         if round_num not in globals_ or round_num - 1 not in globals_:
             continue
         applied = globals_[round_num] - globals_[round_num - 1]
@@ -134,33 +190,15 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
             reference = all_fedavg
         if not (config.get("defences", {}) or {}).get("robust_aggregation", {}).get("enabled"):
             row["reference_max_abs_error"] = float(np.max(np.abs(applied - reference)))
+            # float32 model arithmetic: the achievable absolute agreement scales
+            # with the magnitude of the model parameters
+            row["reference_relative_error"] = _norm(applied - reference) / max(_norm(reference), 1e-12)
+            row["global_max_abs"] = float(np.max(np.abs(globals_[round_num])))
         row["reference_kind"] = (
             "robust_reference" if defence is not None else ("fedavg_fixed_point" if sum_only else "fedavg")
         )
         rows.append(row)
-    if rows:
-        table = pd.DataFrame(rows)
-        table.to_csv(run_dir / "round_analysis.csv", index=False)
-        for column in ("deviation_from_honest_relative", "malicious_share_effective",
-                       "malicious_share_submitted", "reference_max_abs_error"):
-            if column in table:
-                values = table[column].dropna()
-                if len(values):
-                    summary[f"mean_{column}"] = float(values.mean())
-                    if column == "reference_max_abs_error":
-                        summary["max_reference_max_abs_error"] = float(values.max())
-    # Pack the per-client files into one archive (raw evidence) and remove them.
-    arrays = {}
-    for path in sorted(instrumentation.iterdir()):
-        if path.suffix == ".npz":
-            data = np.load(path)
-            for key in data.files:
-                arrays[f"{path.stem}__{key}"] = data[key]
-        elif path.suffix == ".npy":
-            arrays[path.stem] = np.load(path)
-    np.savez_compressed(run_dir / "instrumentation.npz", **arrays)
-    shutil.rmtree(instrumentation)
-    return summary
+    return rows
 
 
 def load_instrumentation(path: Path) -> dict:

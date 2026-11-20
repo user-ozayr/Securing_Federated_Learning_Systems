@@ -112,7 +112,18 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
             return_code = process.wait(timeout=timeout_seconds)
             detail = f"exit code {return_code}"
             results = list(run_dir.glob("*_results.csv"))
-            status = "completed" if return_code == 0 and results else "failed"
+            abort_files = list(run_dir.glob("*_abort.json"))
+            if return_code == 0 and results:
+                status = "completed"
+            elif results and abort_files:
+                # Fail-closed abort (e.g. a secure round refused to encode a
+                # diverged model): partial per-round results are kept.
+                status = "aborted"
+                abort = json.loads(abort_files[0].read_text(encoding="utf-8"))
+                detail = (f"aborted after round {abort.get('rounds_completed')}: "
+                          f"{abort.get('cause_type')}: {abort.get('cause', '')[-300:]}")
+            else:
+                status = "failed"
         except subprocess.TimeoutExpired:
             _kill_group(process)
             status, detail = "timeout", f"exceeded {timeout_seconds} s"
@@ -127,7 +138,7 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
         "finished_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "load_average_end": os.getloadavg(),
     })
-    if status == "completed":
+    if status in ("completed", "aborted"):
         try:
             from fl_security.experiments.analysis import analyze_run
 
@@ -150,7 +161,8 @@ def run_suite(output_root: Path, studies: list[str] | None, timeout_seconds: int
         meta_path = output_root / "runs" / spec.study / spec.run_id / "run_metadata.json"
         if meta_path.exists():
             try:
-                if json.loads(meta_path.read_text(encoding="utf-8")).get("status") == "completed":
+                # completed and fail-closed aborted runs are deterministic outcomes
+                if json.loads(meta_path.read_text(encoding="utf-8")).get("status") in ("completed", "aborted"):
                     continue
             except json.JSONDecodeError:
                 pass

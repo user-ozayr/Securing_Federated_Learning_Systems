@@ -37,18 +37,21 @@ def _read_runs(root: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
             "mtd_secret_sha256_commitment", "started_utc", "finished_utc")}
         entry.update({f"analysis_{k}": v for k, v in (meta.get("analysis") or {}).items()})
         index.append(entry)
-        if meta.get("status") != "completed":
+        if meta.get("status") not in ("completed", "aborted"):
             continue
         results = next(run_dir.glob("*_results.csv"), None)
         if results is None:
             continue
         frame = pd.read_csv(results)
         frame = frame[frame["round"] > 0].copy()
+        if frame.empty:
+            continue
         analysis = run_dir / "round_analysis.csv"
         if analysis.exists():
             frame = frame.merge(pd.read_csv(analysis), on="round", how="left", suffixes=("", "_analysis"))
         for key in ("run_id", "study", "condition", "attack", "seed", "uses_mpc", "mtd_schedule"):
             frame[key] = meta.get(key)
+        frame["run_status"] = meta.get("status")
         rounds.append(frame)
     all_rounds = pd.concat(rounds, ignore_index=True) if rounds else pd.DataFrame()
     return all_rounds, pd.DataFrame(index)
@@ -74,6 +77,10 @@ def per_run_summary(all_rounds: pd.DataFrame) -> pd.DataFrame:
         group = group.sort_values("round")
         last = group.iloc[-1]
         row = {k: last[k] for k in ("run_id", "study", "condition", "attack", "seed", "uses_mpc", "mtd_schedule")}
+        row["run_status"] = last.get("run_status", "completed")
+        row["rounds_completed"] = int(group["round"].max())
+        row["aborted"] = int(row["run_status"] == "aborted")
+        # For aborted runs, "final" refers to the last completed round.
         row["final_accuracy"] = float(last["global_accuracy"])
         row["final_loss"] = float(last["global_loss"])
         row["last3_mean_accuracy"] = float(group["global_accuracy"].tail(3).mean())
@@ -92,6 +99,9 @@ def per_run_summary(all_rounds: pd.DataFrame) -> pd.DataFrame:
                 row[f"mean_{column}"] = float(group[column].mean())
         if "reference_max_abs_error" in group and group["reference_max_abs_error"].notna().any():
             row["max_reference_abs_error"] = float(group["reference_max_abs_error"].max())
+        if "reference_relative_error" in group and group["reference_relative_error"].notna().any():
+            row["max_reference_relative_error"] = float(group["reference_relative_error"].max())
+            row["max_global_abs"] = float(group["global_max_abs"].max())
         row.update(_detection(group))
         rows.append(row)
     return pd.DataFrame(rows)
@@ -99,7 +109,7 @@ def per_run_summary(all_rounds: pd.DataFrame) -> pd.DataFrame:
 
 def summarize(final: pd.DataFrame) -> pd.DataFrame:
     metrics = [c for c in final.columns if c not in
-               {"run_id", "study", "condition", "attack", "seed", "uses_mpc", "mtd_schedule"}]
+               {"run_id", "study", "condition", "attack", "seed", "uses_mpc", "mtd_schedule", "run_status"}]
     rows = []
     for (study, condition, attack), group in final.groupby(["study", "condition", "attack"]):
         for metric in metrics:
@@ -365,6 +375,48 @@ def key_tables(final: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+EQUIVALENCE_PAIRS = (
+    # (label, run A pattern, run B pattern, expectation)
+    ("SPDZ2k robust vs plaintext reference of the same algorithm",
+     "e1x__smpc_defence__backdoor__s{seed}", "e4__reference_defence__backdoor__default__s{seed}",
+     "identical up to float32 model arithmetic"),
+    ("SPDZ2k sum-only vs plaintext FedAvg (static participation)",
+     "e1__smpc_only__{attack}__s{seed}", "e1__baseline__{attack}__s{seed}",
+     "identical up to fixed-point rounding (scale 1e6)"),
+    ("Determinism: adaptive attacker without a published threshold vs boosted backdoor (FedAvg)",
+     "e2__baseline__adaptive_backdoor__s{seed}", "e1__baseline__backdoor__s{seed}",
+     "identical (same update scaling)"),
+)
+
+
+def equivalence(all_rounds: pd.DataFrame) -> pd.DataFrame:
+    """Per-round comparison of runs that should produce the same model trajectory."""
+    rows = []
+    by_run = {run_id: group.sort_values("round") for run_id, group in all_rounds.groupby("run_id")}
+    seeds = sorted({int(s) for s in all_rounds["seed"].dropna().unique()})
+    attacks = sorted(all_rounds["attack"].dropna().unique())
+    for label, pattern_a, pattern_b, expectation in EQUIVALENCE_PAIRS:
+        for seed in seeds:
+            for attack in (attacks if "{attack}" in pattern_a else [None]):
+                run_a = pattern_a.format(seed=seed, attack=attack)
+                run_b = pattern_b.format(seed=seed, attack=attack)
+                if run_a not in by_run or run_b not in by_run:
+                    continue
+                a, b = by_run[run_a], by_run[run_b]
+                merged = a.merge(b, on="round", suffixes=("_a", "_b"))
+                if merged.empty:
+                    continue
+                row = {"comparison": label, "run_a": run_a, "run_b": run_b, "expectation": expectation,
+                       "rounds": int(len(merged)),
+                       "max_abs_accuracy_difference": float((merged["global_accuracy_a"] - merged["global_accuracy_b"]).abs().max()),
+                       "max_abs_loss_difference": float((merged["global_loss_a"] - merged["global_loss_b"]).abs().max())}
+                if "backdoor_asr_a" in merged and merged["backdoor_asr_a"].notna().any():
+                    row["max_abs_asr_difference"] = float(
+                        (merged["backdoor_asr_a"] - merged["backdoor_asr_b"]).abs().max())
+                rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def build_manifest(completion_root: Path, output_name: str = "final_validation_manifest.json",
                    extra: dict | None = None) -> dict:
     """SHA-256 and size of every evidence file below ``completion_root``."""
@@ -407,6 +459,7 @@ def build_reports(root: Path) -> dict:
     attack_matrix = matrix(final)
     sanitize_csv_dataframe(attack_matrix).to_csv(summaries_dir / "attack_defence_matrix.csv", index=False)
     (summaries_dir / "key_results.md").write_text(key_tables(final), encoding="utf-8")
+    sanitize_csv_dataframe(equivalence(all_rounds)).to_csv(summaries_dir / "equivalence_checks.csv", index=False)
     (summaries_dir / "attack_defence_matrix_criteria.txt").write_text(MATRIX_CRITERIA + "\n", encoding="utf-8")
     status_counts = index["status"].value_counts().to_dict() if not index.empty else {}
     result = {"runs": int(len(index)), "status_counts": status_counts,

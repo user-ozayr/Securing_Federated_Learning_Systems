@@ -960,6 +960,7 @@ def run_flower_simulation(config: dict) -> None:
         for name in server_only_names
         if name in os.environ
     }
+    aborted: BaseException | None = None
     try:
         start_simulation(
             client_fn=client_fn,
@@ -972,11 +973,25 @@ def run_flower_simulation(config: dict) -> None:
             },
             ray_init_args={"include_dashboard": False, "ignore_reinit_error": True},
         )
+    except Exception as exc:  # fail-closed abort: keep the rounds that did complete
+        aborted = exc
     finally:
         os.environ.update(server_only_env)
     evaluation, name = config.get("evaluation", {}), experiment.get("name", "fl_security_experiment")
-    if evaluation.get("save_csv", True):
+    if evaluation.get("save_csv", True) and logger.records:
         logger.save_to_csv(f"{slug}_results.csv")
+    if aborted is not None:
+        completed = max((int(r.get("round", 0)) for r in logger.records), default=0)
+        cause = aborted.__cause__ or aborted
+        (Path(logger.output_dir) / f"{slug}_abort.json").write_text(json.dumps({
+            "error_type": type(aborted).__name__,
+            "error": str(aborted)[:2000],
+            "cause_type": type(cause).__name__,
+            "cause": str(cause)[-2000:],
+            "rounds_completed": completed,
+            "rounds_configured": rounds,
+        }, indent=2), encoding="utf-8")
+        raise aborted
     if evaluation.get("save_plots", True):
         logger.plot_metrics(f"{slug}_accuracy.png")
     print(f"Flower experiment '{name}' completed.")
