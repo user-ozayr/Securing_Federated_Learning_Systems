@@ -1,0 +1,9 @@
+{
+  "runs": 228,
+  "status_counts": {
+    "completed": 223,
+    "aborted": 5
+  },
+  "completed_runs_with_rounds": 228,
+  "figures": 34
+}

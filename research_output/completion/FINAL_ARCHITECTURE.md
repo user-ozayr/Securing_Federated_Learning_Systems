@@ -102,7 +102,7 @@ smpc:
     threshold: static | adaptive
     static_norm, min_norm, max_norm, max_valid_norm: float
     median_multiplier_squared, screen_multiplier_squared: int
-    fractional_bits: int (14), clip_bits: int (8)
+    fractional_bits: int (default 14), clip_bits: int (default 6; the evaluation uses 8, and 6 for screen-only and E5)
     weighting: uniform | sample, weight_bits: int
     reveal_client_flags: bool, chunk_size: int, use_edabits: bool
 defences:                        # plaintext comparisons only

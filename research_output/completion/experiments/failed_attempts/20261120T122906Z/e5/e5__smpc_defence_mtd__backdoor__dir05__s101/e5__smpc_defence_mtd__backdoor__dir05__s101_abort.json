@@ -1,0 +1,8 @@
+{
+  "error_type": "RuntimeError",
+  "error": "Simulation crashed.",
+  "cause_type": "ValueError",
+  "cause": "robust specification exceeds the 2^62 bit budget",
+  "rounds_completed": 0,
+  "rounds_configured": 10
+}

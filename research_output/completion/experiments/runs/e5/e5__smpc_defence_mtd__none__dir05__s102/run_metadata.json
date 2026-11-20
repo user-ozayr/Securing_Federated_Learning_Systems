@@ -1,0 +1,54 @@
+{
+  "run_id": "e5__smpc_defence_mtd__none__dir05__s102",
+  "study": "e5",
+  "condition": "smpc_defence_mtd",
+  "attack": "none__dir05",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "aa4bc9f865c51095a73371f176a410315203241d939e431eb040062e0934268c",
+  "config_sha256": "1af29451306b19b8b23c3b4875607771186925ed53ba5397e1bcda4eb2ffe9bf",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e5/e5__smpc_defence_mtd__none__dir05__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T13:51:42Z",
+  "load_average_start": [
+    4.68408203125,
+    4.5087890625,
+    4.11572265625
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 349.194,
+  "finished_utc": "2026-11-20T13:57:32Z",
+  "load_average_end": [
+    3.7880859375,
+    4.576171875,
+    4.2978515625
+  ],
+  "analysis": {
+    "final_accuracy": 0.7442,
+    "final_loss": 0.6978995188236237,
+    "final_backdoor_asr": 0.02022222222222222,
+    "mean_deviation_from_honest_relative": 0.13750987553844055,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 5.042882348198219e-08,
+    "max_reference_max_abs_error": 7.94728596958949e-08,
+    "mean_reference_relative_error": 1.107039923688576e-07,
+    "max_reference_relative_error": 1.720523760797312e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.13750987553844055,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 5.042882348198219e-08,
+    "max_reference_max_abs_error": 7.94728596958949e-08,
+    "mean_reference_relative_error": 1.107039923688576e-07,
+    "max_reference_relative_error": 1.720523760797312e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

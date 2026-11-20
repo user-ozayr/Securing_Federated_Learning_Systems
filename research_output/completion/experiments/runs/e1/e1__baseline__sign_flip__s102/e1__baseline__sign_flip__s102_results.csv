@@ -1,0 +1,12 @@
+round,global_loss,global_accuracy,backdoor_asr,selected_clients,completed_clients,malicious_selected,selected_client_ids,malicious_client_ids,smpc_enabled,smpc_program,mtd_enabled,mtd_schedule,mtd_secret_seeded,model_parameters,mp_spdz_parties_used,mp_spdz_input_bytes,aggregation_seconds,round_seconds,mpc_start_seconds,mpc_client_submit_seconds_max,mpc_receive_seconds,mpc_finish_seconds,mpc_protocol_seconds_max,mpc_global_data_sent_mb,client_failures_or_omissions,robust_aggregation_enabled,robust_aggregation_rule,detected_client_count,detected_client_ids,accepted_client_ids,robust_fallback_used,flagged_client_count,history_updated_client_ids,detection_true_positives,detection_false_positives,detection_false_negatives,detection_precision,detection_recall,robust_client_scores_json
+0,2.304742292022705,0.0773,0.6044444444444445,0,0,0,[],[],0,none,0,static,0,2202,0,0,0.0,0.0,,,,,,,0,0,fedavg,0,[],[],0,0,[],0,0,0,,,[]
+1,110.26221107177734,0.1,0.0,4,4,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0023363580112345517,11.960038142991834,,,,,,,0,0,fedavg,0,[],"[0, 2, 3, 1]",0,0,[],0,0,1,,,[]
+2,89031076.0192,0.1,0.0,4,4,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.002280998000060208,8.505998895998346,,,,,,,0,0,fedavg,0,[],"[1, 3, 0, 2]",0,0,[],0,0,1,,,[]
+3,3.606393957794501e+19,0.0715,0.47755555555555557,4,4,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0023400380014209077,8.499595661007334,,,,,,,0,0,fedavg,0,[],"[0, 3, 1, 2]",0,0,[],0,0,1,,,[]
+4,,0.1,1.0,4,3,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.401113538013306,,,,,,,1,0,fedavg,0,[],"[1, 2, 0]",0,0,[],0,0,1,,,[]
+5,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.393099863998941,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]
+6,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.292139422002947,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]
+7,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.512752410999383,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]
+8,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.472444122002344,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]
+9,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.524680322007043,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]
+10,,0.1,1.0,4,0,1,"[0, 1, 2, 3]",[0],0,none,0,static,0,2202,0,0,0.0016522790101589635,8.431081753995386,,,,,,,4,0,fedavg,0,[],[],0,0,[],0,0,1,,,[]

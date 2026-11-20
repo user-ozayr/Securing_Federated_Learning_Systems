@@ -1,0 +1,31 @@
+{
+  "run_id": "e5__smpc_defence_mtd__backdoor__dir05__s101",
+  "study": "e5",
+  "condition": "smpc_defence_mtd",
+  "attack": "backdoor__dir05",
+  "seed": 101,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "c2b87a3c8bee442173c597006fa8b7433a11b3679314b0348f500718f800602c",
+  "config_sha256": "295d892f0f4ea5e15e12adfd89ce8dbb4585ed334731bdd870e852f0bc347540",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e5/e5__smpc_defence_mtd__backdoor__dir05__s101.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T12:23:28Z",
+  "load_average_start": [
+    1.41845703125,
+    1.6689453125,
+    1.63525390625
+  ],
+  "status": "failed",
+  "detail": "exit code 1",
+  "wall_seconds": 31.683,
+  "finished_utc": "2026-11-20T12:24:00Z",
+  "load_average_end": [
+    1.29345703125,
+    1.61865234375,
+    1.6201171875
+  ]
+}

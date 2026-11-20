@@ -1,0 +1,54 @@
+{
+  "run_id": "e5__smpc_defence_mtd__backdoor__dir05__s102",
+  "study": "e5",
+  "condition": "smpc_defence_mtd",
+  "attack": "backdoor__dir05",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "962f2c5e653a8bd158d5bb06a90e9fead8cb2508efe4e3062f146618e912e00b",
+  "config_sha256": "c1ef84168ee37bc8a060d73900710d770d441045b3d8392385379d2777d80477",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e5/e5__smpc_defence_mtd__backdoor__dir05__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T13:57:32Z",
+  "load_average_start": [
+    3.7880859375,
+    4.576171875,
+    4.2978515625
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 329.473,
+  "finished_utc": "2026-11-20T14:03:01Z",
+  "load_average_end": [
+    4.66748046875,
+    4.54150390625,
+    4.34765625
+  ],
+  "analysis": {
+    "final_accuracy": 0.7531,
+    "final_loss": 0.6424318408966064,
+    "final_backdoor_asr": 0.0057777777777777775,
+    "mean_deviation_from_honest_relative": 0.19062898466742934,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.5181963437283382,
+    "mean_reference_max_abs_error": 6.191787266379701e-08,
+    "max_reference_max_abs_error": 9.536743164617612e-08,
+    "mean_reference_relative_error": 9.529547804529095e-08,
+    "max_reference_relative_error": 1.4817939266694976e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.19062898466742934,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.5181963437283382,
+    "mean_reference_max_abs_error": 6.191787266379701e-08,
+    "max_reference_max_abs_error": 9.536743164617612e-08,
+    "mean_reference_relative_error": 9.529547804529095e-08,
+    "max_reference_relative_error": 1.4817939266694976e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

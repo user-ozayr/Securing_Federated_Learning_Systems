@@ -1,0 +1,54 @@
+{
+  "run_id": "e1x__smpc_screen__none__s101",
+  "study": "e1x",
+  "condition": "smpc_screen",
+  "attack": "none",
+  "seed": 101,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "d188cf3930bd808f8465780adc6922df3b893929a0729911b8d16bbed897885b",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1x/e1x__smpc_screen__none__s101.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T12:44:26Z",
+  "load_average_start": [
+    1.58056640625,
+    1.8916015625,
+    1.86962890625
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 278.448,
+  "finished_utc": "2026-11-20T12:49:04Z",
+  "load_average_end": [
+    3.5009765625,
+    2.9150390625,
+    2.3125
+  ],
+  "analysis": {
+    "final_accuracy": 0.81,
+    "final_loss": 0.5222768524169922,
+    "final_backdoor_asr": 0.02022222222222222,
+    "mean_deviation_from_honest_relative": 0.0001927300462833536,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 6.183981895446778e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 6.031881224006412e-08,
+    "max_reference_relative_error": 1.0505402501859925e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.0001927300462833536,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 6.183981895446778e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 6.031881224006412e-08,
+    "max_reference_relative_error": 1.0505402501859925e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

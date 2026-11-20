@@ -1,0 +1,52 @@
+{
+  "run_id": "e1__smpc_defence_mtd__backdoor__s102",
+  "study": "e1",
+  "condition": "smpc_defence_mtd",
+  "attack": "backdoor",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "83d4f8eaba12df6968b1ca89ef934db787c395c02097fc2ec5bf0b1eb4c8bf5f",
+  "config_sha256": "a06e7cb1f3c6c5ca7a55368d68546105c23f07057d842eccd0825e55204fce5c",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_defence_mtd__backdoor__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T03:29:47Z",
+  "load_average_start": [
+    4.20654296875,
+    4.4404296875,
+    4.2314453125
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 348.683,
+  "finished_utc": "2026-11-20T03:35:36Z",
+  "load_average_end": [
+    4.2509765625,
+    4.52685546875,
+    4.337890625
+  ],
+  "analysis": {
+    "final_accuracy": 0.8262,
+    "final_loss": 0.4779545120239258,
+    "final_backdoor_asr": 0.017777777777777778,
+    "mean_deviation_from_honest_relative": 0.5245960848598807,
+    "mean_malicious_share_effective": 0.18190820640150673,
+    "mean_malicious_share_submitted": 0.5018112500506431,
+    "mean_reference_max_abs_error": 1.348555087973824e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.5245960848598807,
+    "mean_malicious_share_effective": 0.18190820640150673,
+    "mean_malicious_share_submitted": 0.5018112500506431,
+    "mean_reference_max_abs_error": 1.348555087973824e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07,
+    "mean_reference_relative_error": 6.901945840754248e-08,
+    "max_reference_relative_error": 1.9936278349438655e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

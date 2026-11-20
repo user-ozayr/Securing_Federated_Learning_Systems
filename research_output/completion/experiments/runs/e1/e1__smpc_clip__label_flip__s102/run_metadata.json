@@ -1,0 +1,52 @@
+{
+  "run_id": "e1__smpc_clip__label_flip__s102",
+  "study": "e1",
+  "condition": "smpc_clip",
+  "attack": "label_flip",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "ba5ef79071beefe088a7b833ae3f825c5d9107f7c2b8b497430181d0ba23a5e8",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_clip__label_flip__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T03:52:19Z",
+  "load_average_start": [
+    3.67041015625,
+    3.4443359375,
+    3.32470703125
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 338.408,
+  "finished_utc": "2026-11-20T03:57:57Z",
+  "load_average_end": [
+    4.029296875,
+    4.14990234375,
+    3.67578125
+  ],
+  "analysis": {
+    "final_accuracy": 0.794,
+    "final_loss": 0.7259295756340027,
+    "final_backdoor_asr": 0.01588888888888889,
+    "mean_deviation_from_honest_relative": 0.5386715165770871,
+    "mean_malicious_share_effective": 0.32563783635079213,
+    "mean_malicious_share_submitted": 0.439012788645189,
+    "mean_reference_max_abs_error": 7.087364792823791e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.5386715165770871,
+    "mean_malicious_share_effective": 0.32563783635079213,
+    "mean_malicious_share_submitted": 0.439012788645189,
+    "mean_reference_max_abs_error": 7.087364792823791e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 6.97769963301349e-08,
+    "max_reference_relative_error": 1.0086679045489485e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

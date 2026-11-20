@@ -64,8 +64,9 @@ out-of-range values.
 | `src/fl_security/attacks/byzantine.py` | scaled replacement, backdoor, adaptive backdoor, stratified/predictive placement, per-round assignment (existing behaviour unchanged) |
 | `src/fl_security/mtd/controller.py` | explicit `schedule: static/deterministic/secret` with validation (legacy behaviour unchanged) |
 | `src/fl_security/mtd/exposure.py`, `mtd/simulation.py`, `run_mtd_exposure.py` | **new** adversary models, exposure metrics, Monte-Carlo study |
-| `src/fl_security/experiments/*`, `run_suite.py`, `analyze_suite.py` | **new** grid, resumable runner (process isolation, timeouts, secret commitments), post-run analysis, reports |
-| `tests/test_*` (6 new files) | 43 new tests; total 120 passing |
+| `src/fl_security/experiments/*`, `run_suite.py`, `analyze_suite.py` | **new**: the experiment grid; a resumable runner (process isolation, timeouts, secret commitments, unfinished attempts moved aside before a repeat); post-run analysis restricted to the cohort each run recorded; reports, including the attack/defence matrix with seed-matched, named references |
+| `tests/test_*` (9 new files) | 55 new tests: 54 run by default, plus 1 opt-in real MP-SPDZ integration test (`FL_RUN_MPSPDZ_TESTS=1`). The 77 existing tests are unmodified and pass. Total: 131 passed, 1 skipped by default |
+| `research_output/completion/tools/*` | evidence checks: configuration consistency, end-to-end reference summary, import provenance, raw-log index, and moving stale attempt files |
 | `.gitignore` | `experiments/` anchored to the root (it silently ignored the new package and the evidence directory) |
 | `docs/*` | new: `secure_robust_aggregation.md`, `mtd_scheduling.md`, `reproduction.md`; updated: architecture, threat model, methodology, limitations, SPDZ2k implementation; superseded notices on the two earlier "no clipping" decision documents |
 
@@ -80,10 +81,21 @@ out-of-range values.
 | Serial party start (≈9.7 s per round) | calibration | concurrent start + 0.5 s startup window in the local harness: ≈4.2 s |
 | edaBits (MP-SPDZ suggestion) | A/B calibration: 64–67 s vs 31–34 s per round, 5.6–6.0 GB vs 4.0 GB | kept as an option, disabled by default (negative result) |
 | `label_sorted` ordering | review | original `np.argsort` call kept to preserve earlier partitions |
+| E5 configuration violated the output-check margin (3-bit sample weights, `max_norm` 16) | margin arithmetic | E5 uses `clip_bits = 6`, 2-bit weights; runs re-executed after the fix (`68f8970`) |
+| Per-round metrics lost when a secure run aborted | `e1__smpc_only__sign_flip__s101`: model diverged under sum-only SPDZ2k, clients' fixed-point guard refused to encode it in round 4, round aborted fail-closed | partial results + `*_abort.json` saved; runs classified `aborted` (`f75eb7b`); aborted runs re-executed with the fix |
+| Absolute reference error misleading for diverged models (4.2·10⁶ at ‖w‖∞ ≈ 10¹⁴) | FedAvg sign-flip run | relative error and model magnitude added; relative error 2.8·10⁻⁸ |
+| Screen-only grid configuration violated the output-check margin (bound ρ·τ_max = 32 needs 256×, `g = 8` gives 128×) | all 12 `e1x__smpc_screen__*` runs rejected at round 1 by `round_spec` (the validation worked as designed) | `clip_bits = 6` for screen-only (`99366f7`); a whole-grid validation of all 94 defence configurations now passes. Process lesson: validate every generated configuration before launching a long suite |
+| A running suite process keeps the grid it loaded at start-up | the archived pass-1 E5 and screen-only attempts carry the pre-fix parameters although they ran under the fixed commit (`git_commit` records the code each run executed) | those runs failed validation and were repeated by a new suite process; every one of the 228 stored configurations equals the final grid byte for byte (`tools/verify_run_configs.py`). Process lesson: restart the suite after changing `grid.py` |
+| The post-run analysis mixed per-client files of an earlier attempt into a repeated run | two aborted sum-only SPDZ2k runs with a secret schedule showed 6–8 "participants" per round and relative errors up to 1.1. The first pass had archived failed attempts by copying them, and the repeats reused the directories | `e4c090a`: the analysis uses only the cohort each run recorded (ignored entries are counted, inconsistent rounds flagged), and the suite moves unfinished attempts aside before repeating them; all runs were re-analysed. Only the two affected runs changed (15 stale entries ignored; their error is now 2–3·10⁻⁸ relative). A snapshot of the earlier derived files is in the backup directory |
+| Stale `*_abort.json` of a rejected first attempt left in 15 completed run directories | file older than the repeat's start time | moved next to its byte-identical archived copy; log in `experiments/failed_attempts/STALE_FILES_MOVED.txt` |
+| The matrix counted the low ASR of a ruined model as partial mitigation | MTD-only and SMPC+MTD under the backdoor were labelled "partially mitigated" at accuracies of 0.32 and 0.41 | `e4c090a`: a halved ASR counts only if accuracy is not worse than the undefended baseline; `model_destroyed` column; references are seed-matched and named |
+| Four idle party-service processes orphaned by an early calibration run | found before the final validation (no CPU use, about 1.8 GB RSS) | stopped. The return codes printed by the follow-up chain were the status of `date` (shell `$?` after command substitution); later scripts capture exit codes directly |
 
 ## 5. Validation performed before the evaluation
 
-* 120 unit/integration tests pass (`test_results.txt`).
+* 131 unit and integration tests pass, and so does the opt-in real MP-SPDZ
+  integration test (`test_results.txt`). The same tests pass in fresh clones of
+  `99366f7` and `e4c090a` (`independent_validation/`).
 * Real SPDZ2k (3 parties): 13 scenarios, all revealed values bit-identical to the
   reference; output check behaves as analysed.
 * Full pipeline smoke runs (Flower + SPDZ2k robust + secret MTD + backdoor):
@@ -96,4 +108,14 @@ out-of-range values.
 | Commit | Content |
 |---|---|
 | `071fbbc` | implementation, tests, audit, MPC validation evidence |
-| later commits | documentation, reports and evaluation evidence (see `git log`) |
+| `68f8970` | documentation, report tooling, benchmark harness, MTD exposure study, E5 margin fix |
+| `f75eb7b` | fail-closed abort keeps completed rounds; relative reference error; re-analysis |
+| `99366f7` | screen-only grid configuration fixed (output-check margin) |
+| `e4c090a` | analysis restricted to the recorded cohort; unfinished attempts moved aside before a repeat; `--reanalyze` includes aborted runs; sharper matrix verdicts |
+| later commits | documentation, evaluation evidence and final reports (see `git log`) |
+
+Experiment code paths are identical across `071fbbc`, `68f8970`, `f75eb7b` and
+`99366f7` for runs that complete. `f75eb7b` changes only what is saved when a run
+aborts; `99366f7` changes only the screen-only grid parameters; `e4c090a`
+changes only the post-run tooling. Each run records in `run_metadata.json` the
+commit it executed (`git_dirty` is false for all 228 runs).

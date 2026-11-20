@@ -1,0 +1,52 @@
+{
+  "run_id": "e1__smpc_mtd__scaled_replacement__s102",
+  "study": "e1",
+  "condition": "smpc_mtd",
+  "attack": "scaled_replacement",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "e391b820dc09772ddd4e741a46a6b99ab2d930cc829a8b75fe5467e7729586c9",
+  "config_sha256": "70c115200e30fbbb993f41476b4ce29fa174d3d6d7b8761acdda7831a6f00bbf",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_mtd__scaled_replacement__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T05:28:45Z",
+  "load_average_start": [
+    1.59423828125,
+    2.02392578125,
+    2.23046875
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 448.087,
+  "finished_utc": "2026-11-20T05:36:13Z",
+  "load_average_end": [
+    2.51318359375,
+    2.1943359375,
+    2.20654296875
+  ],
+  "analysis": {
+    "final_accuracy": 0.1,
+    "final_loss": 2.342604624557495,
+    "final_backdoor_asr": 0.0,
+    "mean_deviation_from_honest_relative": 0.8935341110585837,
+    "mean_malicious_share_effective": 0.4757209075899265,
+    "mean_malicious_share_submitted": 0.4757209075899265,
+    "mean_reference_max_abs_error": 1.5199184417724608e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.8935341110585837,
+    "mean_malicious_share_effective": 0.4757209075899265,
+    "mean_malicious_share_submitted": 0.4757209075899265,
+    "mean_reference_max_abs_error": 1.5199184417724608e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07,
+    "mean_reference_relative_error": 5.969400599096534e-08,
+    "max_reference_relative_error": 1.1323834824374485e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

@@ -1,0 +1,15 @@
+fresh clone: /home/ubuntu/gemini/fresh_validation_clone_20261120T155117Z
+cloned from: /home/ubuntu/gemini/fl-security-research (branch research/thesis-completion, single branch)
+commit: 99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f
+started (UTC): 2026-11-20T15:51:17Z
+tracked files modified in clone: 0
+fl_security imported from: None
+interpreter: /home/ubuntu/gemini/fl-security-research/.venv311/bin/python (Python 3.11.18); existing environment, nothing installed
+dataset root: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/data (read only)
+2026-11-20T15:51:25Z pytest (default suite) exit 0: ================== 121 passed, 1 skipped, 2 warnings in 5.95s ==================
+2026-11-20T15:52:03Z pytest (real MP-SPDZ integration tests) exit 0: ======================= 1 passed, 15 warnings in 36.84s ========================
+2026-11-20T15:54:36Z SPDZ2k validation scenarios exit 0
+2026-11-20T16:00:15Z rerun e1x__smpc_defence__backdoor__s101 --local-mp-spdz exit 0
+2026-11-20T16:02:06Z rerun e1__baseline__backdoor__s101 (plaintext) exit 0
+2026-11-20T16:02:06Z comparison written to rerun_comparison.txt
+finished (UTC): 2026-11-20T16:02:06Z

@@ -12,7 +12,13 @@ read more broadly than it supports.
    independence of trust domains. Cross-host deployment was not executed.
 2. **Security with abort, no availability.** Any party, any selected client or a
    malformed input can stop a round (abort or rejected update). There is no
-   dropout recovery.
+   dropout recovery. Observed in the evaluation: (a) without a defence, attacks
+   that make the model diverge end in a fail-closed abort of the sum-only secure
+   round once the fixed-point encoder refuses the diverged weights (5 runs);
+   (b) one transient TLS-handshake reset between a client and a party aborted a
+   round. That is one in about 4,100 SPDZ2k client submissions, each of which
+   opens one TLS connection to every party. The run was repeated, and the failed
+   attempt is archived under `experiments/failed_attempts/`.
 3. **Honest-party assumption.** Confidentiality needs at least one honest party
    and confidential keys; collusion of all parties reveals the inputs.
 4. **Output client trust.** The designated output client (the coordinator in this
@@ -31,10 +37,16 @@ read more broadly than it supports.
    `experiments/mpc_validation`, scenario `colluding_cancellation_k8`). The output
    check bounds the applied update only by the round threshold. Per-coordinate
    range proofs are not implemented.
-8. **Median manipulation.** More than ⌊K/2⌋ inflated norms in one cohort move the
-   lower median; deflated norms lower the threshold (bounded below by
-   `min_norm`), which slows learning. With K = 4 this is a real concern whenever
-   two or more of four participants are malicious.
+8. **Median manipulation.** Inflated norms move the lower median once they make
+   up more than ⌊K/2⌋ of a cohort, i.e. three or more of four participants.
+   Deflated norms lower the threshold (bounded below by `min_norm`), which slows
+   learning. The evaluation reached at most two attackers in a four-client
+   cohort, which the defence still handled (E4, m = 5); three or more were not
+   tested.
+8b. **Heterogeneous honest updates.** Under non-IID data (E5, Dirichlet 0.5),
+   honest updates exceeded the screening bound ρ·τ and were rejected: 2 of 29
+   honest participations in one seed, none in the other. With IID data no
+   honest client was ever rejected.
 9. **Clipping at the median attenuates honest updates.** With `λ² = 1` about
    half of the honest participants are clipped every round by construction; the
    evaluation reports this cost (accuracy, deviation from honest FedAvg).
@@ -80,6 +92,16 @@ read more broadly than it supports.
     same integer algorithm without cryptography; they are labelled as such and
     are used only for parameter sweeps and for the equivalence check against
     SPDZ2k runs.
+21. **Static-cohort artefact in E4.** With stratified placement and static
+    participation, the malicious-count sweep (1, 2, 4, 5 of 12) puts 0, 1, 1 and
+    2 attackers into the fixed four-client cohort. The sweep therefore varies
+    the in-cohort count only between 0 and 2.
+22. **Adaptive attacker model.** The adaptive attacker knows the threshold of
+    the current round, because the defence publishes it (worst case). A design
+    that keeps the threshold secret was not evaluated.
+23. **Scale.** Rounds longer than the parties' 600 s round timeout fail. On this
+    host that limits a robust round to about 100,000 parameters (measured), and
+    the 2.12 M-parameter CIFAR CNN is only extrapolated (about 3.4 h per round).
 
 ## E. Claims that must not be made from this evidence
 

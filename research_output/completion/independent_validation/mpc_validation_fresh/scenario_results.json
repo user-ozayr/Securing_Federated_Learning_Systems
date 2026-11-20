@@ -1,0 +1,1287 @@
+[
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.3217613255301024,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "four honest updates below the static bound",
+    "dimension": 300,
+    "end_to_end_seconds": 11.396697902004234,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.0,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1576.0,
+        "protocol_seconds": 7.45199
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 7.45112
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 7.44722
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "clean_static_clip",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.3266411566751772,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "clipped_count": 1,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "three honest updates and one update boosted to norm 25",
+    "dimension": 300,
+    "end_to_end_seconds": 10.443900446989574,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.011045857371498366,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.84121
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.84145
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.84309
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      2
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "scaled_replacement_static_clip",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.3371899951604076,
+    "clients": 4,
+    "clip_flags": [
+      1,
+      0,
+      0,
+      1
+    ],
+    "clipped_count": 2,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "norm exactly at the bound, zero, tiny and 1.5x bound",
+    "dimension": 300,
+    "end_to_end_seconds": 10.391945006995229,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.0010306514744028439,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.7747
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.77082
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.7757
+      }
+    ],
+    "reference_coefficients": [
+      63,
+      64,
+      64,
+      42
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "boundary_static_clip",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "aggregate_norm": 0.2768210942503258,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      1,
+      0
+    ],
+    "clipped_count": 1,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip_screen",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "adaptive",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "median-based threshold; norm-10 attacker rejected, honest above median clipped",
+    "dimension": 300,
+    "end_to_end_seconds": 12.145506077999016,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.00018867733251730703,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1533.71,
+        "party_data_sent_mb": 511.958,
+        "party_id": 0,
+        "party_rounds": 2036.0,
+        "protocol_seconds": 8.03094
+      },
+      {
+        "global_data_sent_mb": 1533.71,
+        "party_data_sent_mb": 510.874,
+        "party_id": 1,
+        "party_rounds": 1551.0,
+        "protocol_seconds": 8.02786
+      },
+      {
+        "global_data_sent_mb": 1533.71,
+        "party_data_sent_mb": 510.874,
+        "party_id": 2,
+        "party_rounds": 1522.0,
+        "protocol_seconds": 8.03038
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      53,
+      3
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "adaptive_clip_screen",
+    "spec": [
+      1,
+      1,
+      1,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 0.49997873931625003,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "aggregate_norm": 0.28900940796999247,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "screen",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "adaptive",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "median screening without clipping",
+    "dimension": 300,
+    "end_to_end_seconds": 8.615282354003284,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.0,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 827.943,
+        "party_data_sent_mb": 276.358,
+        "party_id": 0,
+        "party_rounds": 1280.0,
+        "protocol_seconds": 4.7405
+      },
+      {
+        "global_data_sent_mb": 827.943,
+        "party_data_sent_mb": 275.792,
+        "party_id": 1,
+        "party_rounds": 969.0,
+        "protocol_seconds": 4.74016
+      },
+      {
+        "global_data_sent_mb": 827.943,
+        "party_data_sent_mb": 275.792,
+        "party_id": 2,
+        "party_rounds": 952.0,
+        "protocol_seconds": 4.74225
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "adaptive_screen_only",
+    "spec": [
+      0,
+      1,
+      1,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 0.49997996126193356,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.4759813297798016,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "clipped_count": 1,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "sample"
+    },
+    "description": "quantized sample weights with one boosted update",
+    "dimension": 300,
+    "end_to_end_seconds": 10.283629051991738,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.01012317299463654,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.70885
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.70192
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.70549
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      7
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "sample_weighted_clip",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      4,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      3,
+      4,
+      8
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "aggregate_norm": 0.32606555947152543,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "one coordinate 2^27 (norm > max_valid_norm): input invalid",
+    "dimension": 300,
+    "end_to_end_seconds": 10.390422048018081,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.0,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.999,
+        "party_id": 0,
+        "party_rounds": 1570.0,
+        "protocol_seconds": 6.79626
+      },
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.104,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.78095
+      },
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.104,
+        "party_id": 2,
+        "party_rounds": 1196.0,
+        "protocol_seconds": 6.77973
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      45
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "malformed_out_of_range",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 16777215.992874147,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "coordinate 2^40 squares to 0 mod 2^64; caught by output check",
+    "dimension": 300,
+    "end_to_end_seconds": 10.391540007985895,
+    "expected_output_check": false,
+    "max_abs_error_vs_ideal_float_clipping": 16777216.002375286,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": false,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.77192
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.77181
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.77296
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": false,
+    "scenario": "wrap_large_coordinate",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "aggregate_norm": 0.35468025286473864,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "squared norm wraps to a negative value: input invalid",
+    "dimension": 300,
+    "end_to_end_seconds": 10.562646593985846,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.0,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.999,
+        "party_id": 0,
+        "party_rounds": 1570.0,
+        "protocol_seconds": 6.86701
+      },
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.104,
+        "party_id": 1,
+        "party_rounds": 1221.0,
+        "protocol_seconds": 6.8599
+      },
+      {
+        "global_data_sent_mb": 1273.21,
+        "party_data_sent_mb": 424.104,
+        "party_id": 2,
+        "party_rounds": 1196.0,
+        "protocol_seconds": 6.85896
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "malformed_negative_square",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 65536.00679070645,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "coordinate 2^32 squares to 0 mod 2^64; accepted in MPC, caught by output check",
+    "dimension": 300,
+    "end_to_end_seconds": 10.340766606997931,
+    "expected_output_check": false,
+    "max_abs_error_vs_ideal_float_clipping": 65535.99773661295,
+    "mpc_matches_reference_exactly": true,
+    "notes": {},
+    "output_check_as_expected": true,
+    "output_check_passed": false,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.74933
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.74811
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.74648
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": false,
+    "scenario": "wrap_single_attacker",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.2966772034014233,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "clipped_count": 1,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "sample"
+    },
+    "description": "odd weight; visible contribution D=w*x has norm 5; decisions use ||w*x||",
+    "dimension": 300,
+    "end_to_end_seconds": 10.320587422989774,
+    "expected_output_check": true,
+    "max_abs_error_vs_ideal_float_clipping": 0.018819102534541374,
+    "mpc_matches_reference_exactly": true,
+    "notes": {
+      "attacker_weight": 3,
+      "naive_unweighted_squared_norm_signed": -8198552920903040071,
+      "visible_target_norm": 5.0
+    },
+    "output_check_as_expected": true,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.67864
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.67703
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.67811
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      38
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "inverse_weight_trick",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      4,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      8,
+      8,
+      8,
+      3
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 1.4249190957177038,
+    "clients": 4,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "two colluders inject a norm-5.68 update (bound 1.0) via cancelling 2^32 multiples",
+    "dimension": 300,
+    "end_to_end_seconds": 10.307462312979624,
+    "expected_output_check": null,
+    "max_abs_error_vs_ideal_float_clipping": 0.244049072265625,
+    "mpc_matches_reference_exactly": true,
+    "notes": {
+      "injected_norm": 5.67892924911695
+    },
+    "output_check_as_expected": null,
+    "output_check_passed": false,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 425.018,
+        "party_id": 0,
+        "party_rounds": 1574.0,
+        "protocol_seconds": 6.74012
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 1,
+        "party_rounds": 1223.0,
+        "protocol_seconds": 6.7407
+      },
+      {
+        "global_data_sent_mb": 1273.25,
+        "party_data_sent_mb": 424.114,
+        "party_id": 2,
+        "party_rounds": 1198.0,
+        "protocol_seconds": 6.74029
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": false,
+    "scenario": "colluding_cancellation_k4",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "accepted": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "aggregate_norm": 0.7245165447402038,
+    "clients": 8,
+    "clip_flags": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "clipped_count": 0,
+    "config": {
+      "chunk_size": 256,
+      "clip_bits": 6,
+      "fractional_bits": 14,
+      "max_norm": 4.0,
+      "max_valid_norm": 64.0,
+      "median_multiplier_squared": 1,
+      "min_norm": 0.05,
+      "mode": "clip",
+      "output_margin": 4.0,
+      "reveal_client_flags": true,
+      "screen_multiplier_squared": 4,
+      "static_norm": 1.0,
+      "threshold": "static",
+      "use_edabits": false,
+      "weight_bits": 3,
+      "weighting": "uniform"
+    },
+    "description": "two colluders inject a norm-5.68 update (bound 1.0) via cancelling 2^32 multiples",
+    "dimension": 300,
+    "end_to_end_seconds": 18.222176694020163,
+    "expected_output_check": null,
+    "max_abs_error_vs_ideal_float_clipping": 0.14670562744140625,
+    "mpc_matches_reference_exactly": true,
+    "notes": {
+      "injected_norm": 5.678886885799571
+    },
+    "output_check_as_expected": null,
+    "output_check_passed": true,
+    "party_statistics": [
+      {
+        "global_data_sent_mb": 2574.31,
+        "party_data_sent_mb": 859.308,
+        "party_id": 0,
+        "party_rounds": 2717.0,
+        "protocol_seconds": 12.9515
+      },
+      {
+        "global_data_sent_mb": 2574.31,
+        "party_data_sent_mb": 857.501,
+        "party_id": 1,
+        "party_rounds": 2168.0,
+        "protocol_seconds": 12.9529
+      },
+      {
+        "global_data_sent_mb": 2574.31,
+        "party_data_sent_mb": 857.501,
+        "party_id": 2,
+        "party_rounds": 2119.0,
+        "protocol_seconds": 12.9533
+      }
+    ],
+    "reference_coefficients": [
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64
+    ],
+    "reference_output_check_passed": true,
+    "scenario": "colluding_cancellation_k8",
+    "spec": [
+      1,
+      0,
+      0,
+      268435456,
+      671089,
+      4294967296,
+      1,
+      4,
+      6,
+      1099511627776,
+      1,
+      3,
+      0
+    ],
+    "threshold_norm": 1.0,
+    "weights": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  }
+]
