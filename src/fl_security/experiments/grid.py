@@ -58,7 +58,10 @@ DEFENCE_ADAPTIVE = {
     "static_norm": 4.0, "min_norm": 0.25, "max_norm": 16.0, "max_valid_norm": 64.0,
     "fractional_bits": 14, "clip_bits": 8, "reveal_client_flags": True,
 }
-SCREEN_ADAPTIVE = dict(DEFENCE_ADAPTIVE, mode="screen")
+# Screen-only: the output bound is rho * tau_max (= 32), which needs a larger
+# margin than clipping; clipping is off, so g only scales contributions and
+# clip_bits 6 satisfies 2^31 / (2^(g+f) * K) >= 2 * margin * rho * tau_max.
+SCREEN_ADAPTIVE = dict(DEFENCE_ADAPTIVE, mode="screen", clip_bits=6)
 
 CONFIGS = {
     # name: (description, overrides)
