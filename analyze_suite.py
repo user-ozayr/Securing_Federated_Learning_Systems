@@ -20,7 +20,8 @@ def main() -> None:
     parser.add_argument("--benchmarks", default=None)
     parser.add_argument("--manifest", default=None, help="write a SHA-256 manifest of this directory")
     parser.add_argument("--reanalyze", action="store_true",
-                        help="recompute round_analysis.csv of every completed run from instrumentation.npz")
+                        help="recompute round_analysis.csv of every completed or aborted run "
+                             "from instrumentation.npz")
     args = parser.parse_args()
     if args.reanalyze:
         import yaml
@@ -31,7 +32,7 @@ def main() -> None:
         for meta_path in sorted(Path(args.root).glob("runs/*/*/run_metadata.json")):
             run_dir = meta_path.parent
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            if meta.get("status") != "completed" or not (run_dir / "instrumentation.npz").exists():
+            if meta.get("status") not in ("completed", "aborted") or not (run_dir / "instrumentation.npz").exists():
                 continue
             config = yaml.safe_load((run_dir / "config.yaml").read_text(encoding="utf-8"))
             meta["reanalysis"] = reanalyze_packed(run_dir, config)

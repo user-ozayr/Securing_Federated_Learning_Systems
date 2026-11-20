@@ -4,7 +4,9 @@ Each run is executed in a separate process group (``run_experiment.py``) with a
 timeout, so Ray and MP-SPDZ state cannot leak between runs. For secret-derived
 MTD schedules a fresh random FL_MTD_SECRET is generated per run; only its
 SHA-256 commitment is stored. Completed runs are skipped when the suite is
-restarted.
+restarted. Before an unfinished run is repeated, the files of the earlier
+attempt are moved to ``failed_attempts/<UTC stamp>_auto/`` so that the repeat
+starts from an empty directory.
 """
 from __future__ import annotations
 
@@ -13,6 +15,7 @@ import json
 import os
 import platform
 import secrets
+import shutil
 import signal
 import subprocess
 import sys
@@ -56,8 +59,30 @@ def _cleanup_stray_processes() -> None:
     subprocess.run(["pkill", "-f", "[s]pdz2k-party.x"], capture_output=True, check=False)
 
 
+def set_aside_previous_attempt(run_dir: Path, output_root: Path, study: str) -> Path | None:
+    """Move the files of an earlier, unfinished attempt out of ``run_dir``.
+
+    A repeated run must not inherit files of an earlier attempt: per-client
+    instrumentation of a different cohort would be mixed into the analysis, and
+    an old ``*_abort.json`` would be taken for the status of the repeat.
+    Nothing is deleted; the attempt is moved to ``failed_attempts``.
+    """
+    if not run_dir.is_dir() or not any(run_dir.iterdir()):
+        return None
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    target = output_root / "failed_attempts" / f"{stamp}_auto" / study / run_dir.name
+    suffix = 1
+    while target.exists():
+        suffix += 1
+        target = output_root / "failed_attempts" / f"{stamp}_auto{suffix}" / study / run_dir.name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(run_dir), str(target))
+    return target
+
+
 def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
     run_dir = output_root / "runs" / spec.study / spec.run_id
+    previous_attempt = set_aside_previous_attempt(run_dir, output_root, spec.study)
     run_dir.mkdir(parents=True, exist_ok=True)
     config = json.loads(json.dumps(spec.config))
     config["evaluation"]["output_dir"] = str(run_dir.resolve())
@@ -98,6 +123,7 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
         "command": " ".join(command[1:]),
         "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "load_average_start": os.getloadavg(),
+        "previous_attempt_moved_to": str(previous_attempt) if previous_attempt else None,
     }
     log_path = run_dir / "run.log"
     started = time.perf_counter()

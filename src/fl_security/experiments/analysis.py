@@ -17,6 +17,13 @@ round:
   end-to-end correctness check of the secure computation inside real FL rounds.
 
 The per-client files are packed into one compressed ``instrumentation.npz``.
+
+Only entries of clients that the run itself recorded as selected in a round
+(``selected_client_ids`` in the results CSV) are analysed. Entries of other
+clients, which can only come from an earlier attempt in a reused run directory,
+are ignored and counted (``instrumentation_ignored_entries``). A round whose
+remaining entries do not match the recorded number of completed clients is
+flagged (``instrumentation_consistent = 0``) and gets no metrics.
 """
 from __future__ import annotations
 
@@ -72,6 +79,41 @@ def _defended(config_obj: SecureDefenceConfig, ids, deltas, counts):
     return applied, coefficient, decoded
 
 
+def _recorded_cohorts(frame: pd.DataFrame) -> dict[int, tuple[set[int], int | None]]:
+    """Per round: the client ids the run selected and how many of them completed."""
+    cohorts: dict[int, tuple[set[int], int | None]] = {}
+    if "selected_client_ids" not in frame:
+        return cohorts
+    for _, row in frame.iterrows():
+        text = row.get("selected_client_ids")
+        if not isinstance(text, str) or not text.strip().startswith("["):
+            continue
+        completed = row.get("completed_clients")
+        cohorts[int(row["round"])] = (
+            {int(value) for value in json.loads(text)},
+            None if completed is None or pd.isna(completed) else int(completed),
+        )
+    return cohorts
+
+
+def _restrict_to_recorded_cohorts(rounds_data: dict, cohorts: dict) -> dict[int, dict]:
+    """Drop instrumentation entries of clients outside each round's recorded cohort."""
+    audit: dict[int, dict] = {}
+    for round_num, (ids, deltas, flags, counts) in rounds_data.items():
+        if round_num not in cohorts:
+            continue
+        cohort, completed = cohorts[round_num]
+        keep = [index for index, client_id in enumerate(ids) if client_id in cohort]
+        ignored = len(ids) - len(keep)
+        for values in (ids, deltas, flags, counts):
+            values[:] = [values[index] for index in keep]
+        audit[round_num] = {
+            "instrumentation_ignored_entries": ignored,
+            "instrumentation_consistent": int(completed is None or len(keep) == completed),
+        }
+    return audit
+
+
 def analyze_run(run_dir: Path, config: dict) -> dict:
     run_dir = Path(run_dir)
     instrumentation = next(run_dir.glob("*_instrumentation"), None)
@@ -95,7 +137,8 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
         flags.append(bool(data["malicious"]))
         counts.append(int(data["num_examples"]))
     globals_ = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_global.npy")}
-    summary.update(_summarize_rows(run_dir, _round_rows(rounds_data, globals_, config)))
+    audit = _restrict_to_recorded_cohorts(rounds_data, _recorded_cohorts(frame))
+    summary.update(_summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit)))
     # Pack the per-client files into one archive (raw evidence) and remove them.
     arrays = {}
     for path in sorted(instrumentation.iterdir()):
@@ -130,7 +173,10 @@ def reanalyze_packed(run_dir: Path, config: dict) -> dict:
         order = sorted(range(len(ids)), key=lambda i: ids[i])
         for values in (ids, deltas, flags, counts):
             values[:] = [values[i] for i in order]
-    return _summarize_rows(run_dir, _round_rows(rounds_data, globals_, config))
+    results = next(run_dir.glob("*_results.csv"), None)
+    cohorts = _recorded_cohorts(pd.read_csv(results)) if results is not None else {}
+    audit = _restrict_to_recorded_cohorts(rounds_data, cohorts)
+    return _summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit))
 
 
 def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
@@ -147,10 +193,15 @@ def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
                     summary[f"mean_{column}"] = float(values.mean())
                     if column.startswith("reference_"):
                         summary[f"max_{column}"] = float(values.max())
+        if "instrumentation_ignored_entries" in table:
+            summary["instrumentation_ignored_entries"] = int(
+                table["instrumentation_ignored_entries"].fillna(0).sum())
+            summary["instrumentation_inconsistent_rounds"] = int(
+                (table["instrumentation_consistent"].fillna(1) == 0).sum())
     return summary
 
 
-def _round_rows(rounds_data: dict, globals_: dict, config: dict) -> list[dict]:
+def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | None = None) -> list[dict]:
     defence = _defence(config)
     smpc = config.get("smpc", {}) or {}
     sum_only = bool(smpc.get("enabled")) and defence is None
@@ -158,6 +209,11 @@ def _round_rows(rounds_data: dict, globals_: dict, config: dict) -> list[dict]:
     for round_num in sorted(rounds_data):
         ids, deltas, flags, counts = rounds_data[round_num]
         if round_num not in globals_ or round_num - 1 not in globals_:
+            continue
+        check = (audit or {}).get(round_num, {})
+        if not ids or (check and not check["instrumentation_consistent"]):
+            # the entries do not match what the run recorded: no metrics for this round
+            rows.append({"round": round_num, "participants": len(ids), **check})
             continue
         applied = globals_[round_num] - globals_[round_num - 1]
         weights = np.asarray(counts, dtype=np.float64)
@@ -197,6 +253,7 @@ def _round_rows(rounds_data: dict, globals_: dict, config: dict) -> list[dict]:
         row["reference_kind"] = (
             "robust_reference" if defence is not None else ("fedavg_fixed_point" if sum_only else "fedavg")
         )
+        row.update(check)
         rows.append(row)
     return rows
 

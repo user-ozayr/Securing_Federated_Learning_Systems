@@ -193,18 +193,45 @@ MATRIX_CRITERIA = (
     "lowers FedAvg baseline accuracy by < 0.02 and (backdoor) baseline ASR < 0.10; otherwise "
     "'mitigated' if the condition's accuracy is within 0.02 of its own no-attack accuracy and "
     "(backdoor) its ASR < 0.10; 'partially mitigated' if it recovers >= 50 % of the baseline's "
-    "accuracy loss or (backdoor) halves the baseline ASR; else 'not mitigated'."
+    "accuracy loss, or (backdoor) halves the baseline ASR without losing more accuracy than the "
+    "undefended baseline under the same attack; else 'not mitigated'. A destroyed model also has a "
+    "low ASR, so a low ASR alone never counts; rows with last-3 accuracy < 0.2 are marked "
+    "model_destroyed and their ASR is not meaningful. References come from the same study; a study "
+    "without a run of its own uses the study that shares its setting (e1x, e2, e4 -> e1, then e1x; "
+    "reference_defence -> smpc_defence, the same algorithm executed in SPDZ2k; '<attack>__default' "
+    "-> '<attack>'), always over the same seeds. The *_reference columns name the runs used."
 )
+
+# Studies whose settings equal another study's except for the factor they vary.
+REFERENCE_FALLBACKS = {"e1x": ("e1",), "e2": ("e1", "e1x"), "e4": ("e1", "e1x")}
+# The plaintext execution of the robust algorithm and its SPDZ2k execution are
+# trajectory-identical (equivalence_checks.csv), so one can stand in for the other.
+CONDITION_ALIASES = {"reference_defence": "smpc_defence"}
+DESTROYED_ACCURACY = 0.2
+
+
+def _find_reference(final: pd.DataFrame, study: str, condition: str, attacks: list[str],
+                    seeds: list) -> tuple[pd.DataFrame | None, str | None]:
+    """First available (study, condition, attack) runs over the given seeds."""
+    conditions = [condition] + ([CONDITION_ALIASES[condition]] if condition in CONDITION_ALIASES else [])
+    for candidate_study in (study, *REFERENCE_FALLBACKS.get(study, ())):
+        for candidate_condition in conditions:
+            for candidate_attack in attacks:
+                group = final[(final.study == candidate_study) & (final.condition == candidate_condition)
+                              & (final.attack == candidate_attack) & final.seed.isin(seeds)]
+                if len(group):
+                    used = ",".join(str(seed) for seed in sorted(group.seed))
+                    return group, f"{candidate_study}/{candidate_condition}/{candidate_attack} (seeds {used})"
+    return None, None
 
 
 def matrix(final: pd.DataFrame) -> pd.DataFrame:
     """Attack/defence matrix with explicit, mechanical verdict criteria."""
     rows = []
-    means = final.groupby(["study", "condition", "attack"]).mean(numeric_only=True)
-    for (study, condition, attack), values in means.iterrows():
-        row = {"study": study, "condition": condition, "attack": attack,
-               "seeds": int((final[(final.study == study) & (final.condition == condition)
-                                   & (final.attack == attack)]).shape[0])}
+    for (study, condition, attack), group in final.groupby(["study", "condition", "attack"]):
+        values = group.mean(numeric_only=True)
+        seeds = sorted(group["seed"])
+        row = {"study": study, "condition": condition, "attack": attack, "seeds": int(len(group))}
         for column in ("final_accuracy", "last3_mean_accuracy", "final_backdoor_asr",
                        "mean_malicious_share_submitted", "mean_malicious_share_effective",
                        "mean_deviation_from_honest_relative", "rejection_tpr", "rejection_fpr",
@@ -213,37 +240,51 @@ def matrix(final: pd.DataFrame) -> pd.DataFrame:
                        "max_reference_abs_error"):
             if column in values and pd.notna(values[column]):
                 row[column] = float(values[column])
-        clean = means.loc[(study, condition, "none")] if (study, condition, "none") in means.index else None
-        base_attack = means.loc[(study, "baseline", attack)] if (study, "baseline", attack) in means.index else None
-        base_clean = means.loc[(study, "baseline", "none")] if (study, "baseline", "none") in means.index else None
         accuracy = row.get("last3_mean_accuracy")
-        if clean is not None and accuracy is not None:
-            row["degradation_vs_own_clean"] = float(clean["last3_mean_accuracy"] - accuracy)
-        verdict = "not applicable" if attack == "none" else "insufficient reference"
-        if attack != "none" and base_attack is not None and base_clean is not None and accuracy is not None:
-            baseline_loss = float(base_clean["last3_mean_accuracy"] - base_attack["last3_mean_accuracy"])
-            row["baseline_accuracy_loss"] = baseline_loss
-            asr = row.get("final_backdoor_asr")
-            base_asr = float(base_attack.get("final_backdoor_asr", np.nan)) if "final_backdoor_asr" in base_attack else np.nan
-            is_backdoor = "backdoor" in attack
-            effective = baseline_loss >= 0.02 or (is_backdoor and pd.notna(base_asr) and base_asr >= 0.10)
-            if not effective:
-                verdict = "no attack effect"
-            else:
-                own_loss = row.get("degradation_vs_own_clean", np.inf)
-                asr_ok = (not is_backdoor) or (asr is not None and asr < 0.10)
-                recovered = (accuracy - float(base_attack["last3_mean_accuracy"])) / baseline_loss \
-                    if baseline_loss >= 0.02 else np.nan
-                halved = is_backdoor and asr is not None and pd.notna(base_asr) and asr <= base_asr / 2
-                if own_loss < 0.02 and asr_ok:
-                    verdict = "mitigated"
-                elif (pd.notna(recovered) and recovered >= 0.5) or halved:
-                    verdict = "partially mitigated"
+        row["model_destroyed"] = int(accuracy is not None and accuracy < DESTROYED_ACCURACY)
+        is_clean = attack == "none" or attack.startswith("none__")
+        suffix = attack.split("__", 1)[1] if "__" in attack else None
+        clean_attacks = ([f"none__{suffix}"] if suffix else []) + ["none"]
+        # '<attack>__default' is the unmodified attack of the study sharing the setting
+        attack_names = [attack] + ([attack.split("__", 1)[0]] if suffix == "default" else [])
+        verdict = "not applicable" if is_clean else "insufficient reference"
+        if not is_clean:
+            clean, clean_label = _find_reference(final, study, condition, clean_attacks, seeds)
+            if clean is not None and accuracy is not None:
+                row["degradation_vs_own_clean"] = float(clean["last3_mean_accuracy"].mean() - accuracy)
+                row["clean_reference"] = clean_label
+            base_attack, base_attack_label = _find_reference(final, study, "baseline", attack_names, seeds)
+            base_clean, base_clean_label = _find_reference(final, study, "baseline", clean_attacks, seeds)
+            if base_attack is not None and base_clean is not None and accuracy is not None:
+                row["baseline_reference"] = base_attack_label
+                row["baseline_clean_reference"] = base_clean_label
+                base_accuracy = float(base_attack["last3_mean_accuracy"].mean())
+                baseline_loss = float(base_clean["last3_mean_accuracy"].mean()) - base_accuracy
+                row["baseline_accuracy_loss"] = baseline_loss
+                asr = row.get("final_backdoor_asr")
+                base_asr = (float(base_attack["final_backdoor_asr"].mean())
+                            if "final_backdoor_asr" in base_attack and base_attack["final_backdoor_asr"].notna().any()
+                            else np.nan)
+                is_backdoor = "backdoor" in attack
+                effective = baseline_loss >= 0.02 or (is_backdoor and pd.notna(base_asr) and base_asr >= 0.10)
+                if not effective:
+                    verdict = "no attack effect"
                 else:
-                    verdict = "not mitigated"
-                if pd.notna(recovered):
-                    row["recovered_fraction_of_baseline_loss"] = float(recovered)
-        row["verdict"] = verdict if condition != "baseline" or attack == "none" else (
+                    own_loss = row.get("degradation_vs_own_clean", np.inf)
+                    asr_ok = (not is_backdoor) or (asr is not None and asr < 0.10)
+                    recovered = (accuracy - base_accuracy) / baseline_loss if baseline_loss >= 0.02 else np.nan
+                    not_worse = accuracy >= base_accuracy - 0.02
+                    halved = (is_backdoor and asr is not None and pd.notna(base_asr)
+                              and asr <= base_asr / 2 and not_worse)
+                    if own_loss < 0.02 and asr_ok:
+                        verdict = "mitigated"
+                    elif (pd.notna(recovered) and recovered >= 0.5) or halved:
+                        verdict = "partially mitigated"
+                    else:
+                        verdict = "not mitigated"
+                    if pd.notna(recovered):
+                        row["recovered_fraction_of_baseline_loss"] = float(recovered)
+        row["verdict"] = verdict if condition != "baseline" or is_clean else (
             "reference (undefended)" if verdict != "no attack effect" else verdict)
         rows.append(row)
     return pd.DataFrame(rows)
