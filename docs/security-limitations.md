@@ -20,6 +20,12 @@ Defence limitations:
   honest magnitude and small-norm backdoors are attenuated only to the extent
   that they exceed the bound; norm bounds cannot detect directionally malicious
   updates of honest size.
+  * Measured: an adaptive backdoor scaled to 0.95 × the published threshold was
+    never rejected and reached ASR up to 0.35 (E2).
+  * Label flipping was only partly mitigated (E1).
+* **Heterogeneous honest updates** can exceed the screening bound. Under
+  non-IID data (Dirichlet 0.5, E5), 2 of 29 honest participations were rejected
+  in one seed; with IID data no honest client was rejected.
 * **Colluding encoding-level attackers** can exceed the per-client bound by
   cancelling wrap-around components; the output check limits the applied update
   to the round bound. Per-coordinate range proofs would close this gap and are

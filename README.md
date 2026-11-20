@@ -190,6 +190,20 @@ global traffic, and application-level input bytes. Methodology:
 `docs/experimental_methodology.md`. The older paired runner `run_benchmark.py`
 remains available.
 
+Results of the completion evaluation (228 runs, same-host deployment) are in
+`research_output/completion/FINAL_VALIDATION_REPORT.md`; limitations are listed
+in `research_output/completion/SECURITY_LIMITATIONS.md`. In short:
+
+* **Exactness.** The SPDZ2k robust program is bit-exact against its reference.
+* **Secure aggregation alone.** Sum-only SPDZ2k does not reduce poisoning.
+* **The in-MPC clip+screen defence** mitigated magnitude-based attacks and a
+  boosted backdoor (ASR 0.017) without rejecting honest IID clients. It
+  mitigated label flipping and an adaptive at-the-bound backdoor only partly
+  (ASR up to 0.35).
+* **MTD** removed schedule predictability but is not a poisoning defence.
+* **Cost.** A secure round with the defence costs 3.7× a FedAvg round at 2,202
+  parameters.
+
 The historical learning rate of 0.1 caused non-finite local weights in the
 five-client CIFAR-10 setup. Use `configs/benchmark_lr001/` for the stabilized
 benchmark; `hybrid_verified.yaml` is the hybrid configuration.

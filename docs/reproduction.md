@@ -33,9 +33,17 @@ Elsewhere: `python -m pip install -e ".[simulation,dev]"`.
 | Robust program vs exact reference (real SPDZ2k, 13 scenarios, ≈4 min) | `$PY run_mpc_validation.py --output-dir research_output/completion/experiments/mpc_validation` |
 | One experiment (plaintext) | `$PY run_experiment.py --config <yaml>` |
 | One experiment (SPDZ2k, local parties) | `FL_MTD_SECRET=$($PY -c 'import secrets;print(secrets.token_urlsafe(48))') $PY run_experiment.py --config <yaml> --local-mp-spdz` |
-| Full evaluation grid (≈12 h, resumable) | `$PY run_suite.py --output-root research_output/completion/experiments` |
+| Full evaluation grid (≈14 h on 3 vCPU, resumable) | `$PY run_suite.py --output-root research_output/completion/experiments` |
 | Subset, e.g. the core table only | `$PY run_suite.py --output-root … --studies e1` |
 | Aggregate tables and figures | `$PY analyze_suite.py --root research_output/completion/experiments` |
+| Recompute the post-run analysis of every completed or aborted run | `$PY analyze_suite.py --root … --reanalyze` |
+| Evidence checks (configurations, end-to-end error, imports, log index) | scripts in `research_output/completion/tools/` |
+| Fresh-clone validation | `bash research_output/completion/independent_validation.sh` |
+
+The suite skips completed runs and fail-closed aborted runs. Before it repeats an
+unfinished run, it moves the earlier attempt to `failed_attempts/<stamp>_auto/`;
+nothing is deleted. A running suite keeps the grid it loaded at start-up, so
+restart it after changing `grid.py`.
 | MTD exposure study (seconds) | `$PY run_mtd_exposure.py --output-dir research_output/completion/experiments/mtd_exposure` |
 | SPDZ2k benchmarks (≈1 h, idle host) | `$PY run_mpc_benchmark.py --output-dir research_output/completion/benchmarks` |
 
@@ -69,3 +77,6 @@ the 2⁶² bit budget or leave too small a margin for the output check; reduce
 | Very slow rounds | other CPU load on the host (3 parties + Ray actors share the cores); edaBits enabled (`use_edabits`) – measured 2× slower here |
 | Low accuracy in round 1 | expected variance of the first averaged step from a random initialisation; later rounds converge |
 | Disk fills up | remove `Programs/Bytecode/fl_spdz_*` leftovers from pre-fix runs; old runs left auxiliary tapes |
+| `SPDZ2k round … exceeded its timeout` for large models | rounds longer than 600 s are stopped by the parties (on 3 vCPU, ≈ 100,000 parameters for the robust program); raise `FL_MPSPDZ_ROUND_TIMEOUT` deliberately |
+| Code from another checkout is imported | `fl_security` is a namespace package; with an editable install of another tree in the same interpreter, modules missing here resolve there. Put this tree's `src` first on `PYTHONPATH` and run `research_output/completion/tools/import_provenance_check.py` |
+| Idle `multiprocessing` workers survive a killed run | local party services are spawned processes; stop leftovers by PID after checking their working directory |

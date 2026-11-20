@@ -63,8 +63,37 @@ Source: `research_output/completion/experiments/mtd_exposure/`.
 Under the secret-derived schedule every adversary is reduced to the random
 baseline (hit rate ≈ K/N); prediction accuracy is at chance (0.33). Against
 static or seed-predictable schedules a just-in-time adversary converts its whole
-budget into participants every round. The effect on attack success inside real
-FL training is measured in study E3 (`experiments/summaries`).
+budget into participants every round.
+
+## Measured effect inside federated training (E3)
+
+E3 runs FedAvg without a defence against a ×4 backdoor, with an adversary
+budget of 2 and 3 seeds. Values are means ± 95 % t-interval half-widths
+(`research_output/completion/experiments/summaries/key_results.md`).
+
+| Schedule | Adversary | Malicious participants / round | Clean accuracy | Final ASR |
+|---|---|---|---|---|
+| static | predictive | 2.00 | 0.126 ± 0.103 | (model destroyed) |
+| static | just-in-time | 2.00 | 0.112 ± 0.050 | (model destroyed) |
+| deterministic | predictive | 1.20 ± 0.25 | 0.575 ± 0.255 | 0.51 ± 0.98 |
+| deterministic | just-in-time | 2.00 | 0.133 ± 0.080 | (model destroyed) |
+| secret | predictive | 0.70 ± 0.43 | 0.717 ± 0.165 | 0.54 ± 1.00 |
+| secret | just-in-time | 0.90 ± 0.25 | 0.761 ± 0.050 | 0.51 ± 1.03 |
+
+* **Exposure.** The secret-derived schedule cut predictive adversaries'
+  exposure from two attackers in every cohort to 0.7–0.9 per round, and the
+  model stayed usable.
+* **No exclusion.** MTD did not prevent the backdoor once an attacker was
+  selected (ASR ≈ 0.5); bounding a selected attacker's influence is the job of
+  the in-MPC defence.
+* **No benefit against non-predictive attackers.** In the core comparison (E1,
+  three malicious clients that do not depend on prediction), randomised cohorts
+  sometimes contained two or three boosted attackers. MTD alone was then
+  *worse* than static participation, where one attacker sits in the cohort:
+  * backdoor accuracy 0.317 (MTD only) and 0.413 (SPDZ2k + MTD), against 0.712
+    for static participation.
+
+  MTD is a defence against schedule prediction, not against poisoning.
 
 ## Interaction with the secure aggregation
 

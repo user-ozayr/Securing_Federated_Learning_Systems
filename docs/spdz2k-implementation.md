@@ -34,7 +34,14 @@ I/O protocol as the weighted-sum program. Differences:
 * **Cleanup:** all bytecode tapes of a round (`<name>-*.bc`) are removed; the
   previous implementation removed only `-0.bc` and left auxiliary tapes behind.
 
-Correctness evidence: 13 real three-party scenarios match the exact integer
-reference bit for bit (`research_output/completion/experiments/mpc_validation`),
-and every instrumented FL run re-checks the applied update against the reference
-(maximum absolute difference at float32 precision, ≈1.2·10⁻⁷).
+Correctness evidence:
+* 13 real three-party scenarios match the exact integer reference bit for bit
+  (`research_output/completion/experiments/mpc_validation`; repeated from a
+  fresh clone).
+* So do 21 benchmark rounds of up to 100,000 parameters.
+* Every instrumented FL run re-checks the applied update against the reference.
+  Over the 70 SPDZ2k robust runs (700 rounds), the maximum absolute difference is
+  2.4·10⁻⁷ (median per run 1.2·10⁻⁷), i.e. float32 resolution of the model, and
+  the maximum relative difference is 2.0·10⁻⁷.
+* Training trajectories are identical to the plaintext execution of the same
+  algorithm (`research_output/completion/FINAL_VALIDATION_REPORT.md` §3–4).

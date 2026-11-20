@@ -11,7 +11,7 @@ MTD-secret commitment).
 | Item | Value | Rationale |
 |---|---|---|
 | Dataset | Fashion-MNIST (60k train / 10k test), torchvision normalisation | public, harder than MNIST |
-| Model | `CompactCNN`, 2,202 parameters | keeps a full SPDZ2k round with the defence at ≈30 s on the host; the 2.12 M CIFAR CNN is infeasible for multi-round MPC (sum-only ≈ 246 s already at 100k elements) |
+| Model | `CompactCNN`, 2,202 parameters | keeps a full SPDZ2k round with the defence at ≈ 32 s on the host. The 2.12 M CIFAR CNN is infeasible for multi-round MPC: at 100,000 parameters one round took 277 s (sum-only) and 592 s (robust) in the benchmarks |
 | Clients | N = 12, IID equal partitions (5,000 samples each) | equal partitions make uniform and sample weighting identical |
 | Participation | K = 4 per round (`fraction_train = 0.34`) | leaves room for MTD |
 | Training | 10 rounds, 1 local epoch, SGD (lr 0.05, momentum 0.9), batch 32 | calibrated: 0.83 clean accuracy after 6 rounds |
@@ -60,14 +60,20 @@ response (reference level).
   compromises clients it predicts will be selected (`predictive`, `just_in_time`)
   under static, deterministic and secret schedules; complemented by the
   training-free Monte-Carlo exposure study (`run_mtd_exposure.py`).
-* **E4 sweeps** (2 seeds): malicious proportion (1, 2, 4, 5 of 12), backdoor
-  boost (1, 2, 8, 16) and sign-flip strength (1, 2, 8) for FedAvg and for the
-  *plaintext reference execution* of the adaptive defence (labelled
-  `reference_defence`; identical integer algorithm, no cryptography). Two
-  reference runs at the default setting allow a direct comparison with the
-  SPDZ2k runs of E1x.
-* **E5 non-IID** (Dirichlet α = 0.5, sample-weighted robust aggregation with
-  3-bit weights).
+* **E4 sweeps** (2 seeds) for FedAvg and for the *plaintext reference execution*
+  of the adaptive defence (labelled `reference_defence`; identical integer
+  algorithm, no cryptography). The sweep parameters are:
+  * malicious count (1, 2, 4, 5 of 12);
+  * backdoor boost (1, 2, 8, 16);
+  * sign-flip strength (1, 2, 8).
+
+  Two reference runs at the default setting allow a direct comparison with the
+  SPDZ2k runs of E1x. They are trajectory-identical to those runs. With
+  stratified placement and static participation, the malicious counts put 0, 1,
+  1 and 2 attackers into the fixed four-client cohort.
+* **E5 non-IID** (2 seeds): Dirichlet α = 0.5, secret MTD, and sample-weighted
+  robust aggregation with 2-bit weights and `clip_bits = 6`. These parameters
+  keep the output-check margin; 3-bit weights violate it.
 
 ## Metrics
 
@@ -93,7 +99,23 @@ significance claims are made beyond them.
 
 ## Controls and threats to validity
 
-* All runs share code (one git commit), data, partition and seeds per seed.
+* All runs share data, partitions and seeds per seed. Each run records the
+  commit it executed (`git_commit`; no run used a modified tree).
+  * The completed runs used `071fbbc`, `68f8970`, `f75eb7b` or `99366f7`. Their
+    experiment code paths are identical for completed runs: only the abort path,
+    grid parameters of runs that were repeated, and post-run tooling changed.
+  * Every stored configuration equals what the final grid generates
+    (`tools/verify_run_configs.py`).
+  * A running suite keeps the grid it loaded at start-up, so restart the suite
+    after changing `grid.py`.
+* Failed attempts are archived with their reason under `failed_attempts/` and
+  repeated; nothing is deleted. Since `e4c090a`, the suite moves an unfinished
+  attempt aside before repeating it, and the post-run analysis uses only the
+  cohort the run recorded.
+* Per-round wall time compares implementations, not only protocols:
+  * the pre-existing sum-only program compiles for about 8.5 s per round, so its
+    rounds are slower than the robust ones although its protocol time is half;
+  * MP-SPDZ's own protocol time and traffic are therefore reported separately.
 * Static participation also restricts data coverage to four clients; E3
   separates the scheduling security effect using dynamic schedules only.
 * Timing: the suite runs one experiment at a time on a 3-core host; MPC
@@ -103,6 +125,15 @@ significance claims are made beyond them.
   between parties, not a WAN deployment.
 * The adaptive attacker is assumed to know the threshold (worst case); the
   defence publishes it each round in the current design.
+
+## Results
+
+Measured results, the attack/defence matrix (with its mechanical criteria) and
+all limitations are in `research_output/completion/`:
+* `FINAL_VALIDATION_REPORT.md`;
+* `attack_defence_matrix.csv`;
+* `experiments/summaries/`;
+* `SECURITY_LIMITATIONS.md`.
 
 ## Historical evidence status (before 2026-11-20)
 
