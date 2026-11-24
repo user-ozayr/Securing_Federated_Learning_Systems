@@ -9,20 +9,21 @@ limitations. Source paths are relative to the repository root
 Experiment IDs: **V** SPDZ2k validation scenarios; **E1** core six-configuration
 comparison; **E1x** extended defences; **E2** adaptive attacker; **E3** MTD
 predictability in FL; **E3-MC** MTD Monte-Carlo exposure; **E4** proportion and
-strength sweeps; **E5** non-IID; **B** SPDZ2k benchmarks; **R** fresh-clone
-reproduction.
+strength sweeps; **E5** non-IID; **E6** update leakage (gradient inversion
+against the plaintext and the SPDZ2k view); **B** SPDZ2k benchmarks; **R**
+fresh-clone reproduction.
 
 ## Objective 1 — Survey and classify attacks
 
 | Item | Evidence |
 |---|---|
 | Component | attack library and threat model |
-| Source | `src/fl_security/attacks/byzantine.py`, `attacks/backdoor.py`, `attacks/label_flip.py`, `attacks/sign_flip.py`, `mtd/exposure.py` |
+| Source | `src/fl_security/attacks/byzantine.py`, `attacks/backdoor.py`, `attacks/label_flip.py`, `attacks/sign_flip.py`, `attacks/gradient_inversion.py`, `mtd/exposure.py`, `experiments/leakage.py` |
 | Classification | `THREAT_MODEL.md` (adversary table: curious coordinator, malicious parties, training-level and encoding-level malicious clients, colluding clients, predictive adversary, adaptive attacker); `docs/experimental_methodology.md` (attack table with capability, strength, target, metric) |
-| Implemented attacks | model poisoning (sign flip, scaled model replacement, Gaussian noise), data poisoning (label flip, BadNets backdoor), adaptive constrain-and-scale backdoor, schedule-aware (predictive, just-in-time) compromise, encoding-level wrap-around attacks (V) |
-| Tests | `tests/test_attacks.py`, `test_byzantine.py`, `test_attack_integration.py`, `test_attacks_extended.py`, `test_mtd_schedules.py` |
-| Experiments | E1, E2, E3, E4, V |
-| Not covered | gradient inversion, membership/property inference (classified in the threat model, not implemented or evaluated) |
+| Implemented attacks | model poisoning (sign flip, scaled model replacement, Gaussian noise), data poisoning (label flip, BadNets backdoor), adaptive constrain-and-scale backdoor, schedule-aware (predictive, just-in-time) compromise, encoding-level wrap-around attacks (V); inference by a curious coordinator: optimisation-based gradient inversion, analytic feature and input read-out through fully connected layers, label read-out (E6) |
+| Tests | `tests/test_attacks.py`, `test_byzantine.py`, `test_attack_integration.py`, `test_attacks_extended.py`, `test_mtd_schedules.py`, `test_gradient_inversion.py` |
+| Experiments | E1, E2, E3, E4, E6, V |
+| Not covered | membership and property inference (classified in the threat model, not implemented); gradient inversion of multi-step local updates; a malicious coordinator that manipulates the model to isolate clients |
 
 ## Objective 2 — Evaluate defences and their limits against adaptive adversaries
 
@@ -41,9 +42,9 @@ reproduction.
 | Component | MP-SPDZ v0.4.3 SPDZ2k (3 parties, Z_2^64, s = 64): sum-only and robust programs, authenticated party control |
 | Source | `smpc/mp_spdz.py`, `smpc/mp_spdz_party_service.py`, `smpc/programs/*.mpc`, `smpc/local_demo.py` |
 | Tests | `test_mp_spdz.py`, `test_mp_spdz_control.py`, `test_security_hardening.py`, `test_party_service_robust.py`, `test_flower_secure_smoke.py`, opt-in `test_mpspdz_integration.py` |
-| Experiments | V, E1 (`smpc_only`, `smpc_mtd`, `smpc_clip`, `smpc_defence_mtd`), B |
-| Evidence | `experiments/mpc_validation/`, per-run `round_analysis.csv` (`reference_max_abs_error`), `benchmarks/` |
-| Limits | same-host parties; security with abort; output client trusted with the aggregate |
+| Experiments | V, E1 (`smpc_only`, `smpc_mtd`, `smpc_clip`, `smpc_defence_mtd`), B, E6 (what the coordinator can reconstruct with and without SPDZ2k) |
+| Evidence | `experiments/mpc_validation/`, per-run `round_analysis.csv` (`reference_max_abs_error`), `benchmarks/`, `experiments/leakage/` |
+| Limits | same-host parties; security with abort; output client trusted with the aggregate; the aggregate of a small cohort can still contain exact copies of individual training images (E6) |
 
 ## Objective 4 — Moving Target Defence
 
@@ -87,8 +88,9 @@ Accuracy is the mean of the last three rounds over three seeds, unless stated
 otherwise.
 
 **Objective 1 – survey and classify attacks.**
-* *Status:* achieved for poisoning. Inference attacks are classified in the
-  threat model only, not evaluated.
+* *Status:* achieved for poisoning and for update leakage to a curious
+  coordinator (E6). Membership and property inference are classified in the
+  threat model only.
 * *Findings* (E1, FedAvg, 3 seeds):
 
   | Attack | Effect on FedAvg |
@@ -130,10 +132,15 @@ otherwise.
 * *Overhead:* 3.5–3.7× FedAvg's round time at 2,202 parameters, and about
   5.9 ms and 1.26 MB per parameter for the robust round (B). The limit is about
   100,000 parameters per round under the default 600 s round timeout.
-* *Negative result:* SPDZ2k alone gives no poisoning resistance. At S = 2⁴⁰
-  it reproduces FedAvg exactly, so under the backdoor both reach ASR 0.921.
-  The original S = 10⁶ runs gave 0.877; that difference was a rounding effect,
-  not a property of secure aggregation.
+* *Negative result:* SPDZ2k alone gives no poisoning resistance; under the
+  backdoor, smpc_only has ASR 0.877 against FedAvg's 0.921.
+* *Leakage (E6, FedSGD, K = 4):* hiding individual updates removes label
+  attribution (precision 1.00 → 0.29–0.71) and most multi-image
+  reconstructions. Through a fully connected first layer, however, the aggregate
+  still yields near-exact copies of 75–100 % of a client's images at B = 1,
+  against 100 % from the individual update, and 3–28 % at B = 8. Secure
+  aggregation over a small cohort is therefore not a privacy guarantee for the
+  training data.
 
 **Objective 4 – Moving Target Defence.**
 * *Status:* achieved for unpredictability. MTD is not a poisoning defence.

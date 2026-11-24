@@ -75,6 +75,22 @@ response (reference level).
   robust aggregation with 2-bit weights and `clip_bits = 6`. These parameters
   keep the output-check margin; 3-bit weights violate it.
 
+* **E6 update leakage** (`run_leakage_study.py`, outside the suite): a curious
+  coordinator attacks either the target client's update (plaintext FedAvg) or the
+  decoded SPDZ2k sum-only aggregate of the four-client cohort. The setting is one
+  local SGD step on B ∈ {1, 2, 4, 8} images, an untrained and a one-epoch-trained
+  model, and 8 trials per cell (seed 101). Three attacks are run:
+  * optimisation-based inversion on CompactCNN, with the TV weight calibrated on
+    seed 7;
+  * the analytic read-out of CompactCNN's penultimate features;
+  * the analytic read-out of input images through the first layer of a probe MLP.
+
+  Scores are SSIM/PSNR or cosine similarity of the best match to each of the
+  target's images. Unlike the suite runs, E6 ran from an uncommitted tree; each
+  shard's metadata records the SHA-256 of every source file. Details:
+  `research_output/completion/experiments/leakage/README.md`.
+
+
 ## Metrics
 
 Per round (CSV): clean accuracy and loss, ASR, selected/malicious clients,

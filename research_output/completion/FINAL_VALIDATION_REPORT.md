@@ -355,6 +355,36 @@ FL runs (E3: FedAvg without defence, ×4 backdoor, adversary budget 2, 3 seeds):
 * E1's MTD-only results (§5) show the converse: against adversaries who do not
   depend on prediction, randomised cohorts alone do not help.
 
+## 7b. Update leakage to the coordinator (E6)
+
+Details, method and limits: `experiments/leakage/README.md`. The coordinator is
+honest but curious. It sees either the target client's update (plaintext
+FedAvg) or only the decoded SPDZ2k sum-only aggregate of the four-client cohort,
+computed with the protocol's own arithmetic. The setting is FedSGD: one local
+step on B ∈ {1, 2, 4, 8} images, 8 trials per cell, and an untrained and a
+one-epoch-trained model.
+
+| Attack | FedAvg view | SPDZ2k aggregate |
+|---|---|---|
+| Analytic input read-out, probe MLP (first layer fully connected); share of target images recovered near-exactly (SSIM ≥ 0.9) | 1.00 at B = 1; 0.66–0.80 at B = 8 | **0.75–1.00 at B = 1**; 0.03–0.28 at B = 8 |
+| Analytic feature read-out, CompactCNN (128-d input of the output layer); mean cosine | 1.000 at B = 1; 0.86–0.93 at B = 8 | 0.96–0.97 at B = 1; 0.73–0.89 at B = 8 |
+| Optimisation inversion, CompactCNN; mean SSIM | 0.25–0.33 at B = 1 | 0.18 at B = 1 |
+| Label read-out (output-bias update); precision | 1.00 | 0.29–0.71 (cohort labels, not attributable) |
+
+Findings:
+
+* **Secure aggregation reduces leakage but does not remove it.** Through a fully
+  connected layer, a hidden unit activated by only one image of the cohort
+  copies that image into the aggregate. With four clients and small batches, the
+  coordinator therefore still recovers individual training images exactly from
+  the SPDZ2k output, although it can no longer attribute them to a client.
+  Recovery degrades as the cohort holds more images.
+* **On the deployed CompactCNN**, optimisation-based inversion recovered no
+  recognisable image (no SSIM ≥ 0.5) from either view. This reflects the small
+  model, not a protection mechanism.
+* Not measured: multi-step local training, as used in E1–E5, and a malicious
+  coordinator that manipulates the model to isolate clients.
+
 ## 8. Overhead and scalability (B)
 
 **Inside federated training** (E1, no attack, 2,202 parameters, K = 4, 3
@@ -517,8 +547,11 @@ Fashion-MNIST, 12 clients with 4 per round, 10 rounds, 2–3 seeds):
 2. **Update confidentiality against the coordinator.** By construction and by
    test, the coordinator receives in SMPC mode only the aggregate and the
    declared metadata: threshold, clipped count and accept bits, plus clip flags
-   in the evaluation setting. This rests on the protocol and its tests; it is
-   not an empirical measurement.
+   in the evaluation setting. This rests on the protocol and its tests. E6
+   measures what that buys against a curious coordinator (§7b): label
+   attribution and most multi-image reconstructions are lost, but the aggregate
+   of a small cohort can still contain exact copies of individual training
+   images.
 3. **Secure aggregation alone does not defend against poisoning.**
 4. **A norm defence inside MPC does help.** It mitigated magnitude-based
    poisoning and a non-adaptive boosted backdoor in this setting without
@@ -546,8 +579,10 @@ Fashion-MNIST, 12 clients with 4 per round, 10 rounds, 2–3 seeds):
 4. Security across independent hosts or trust domains, WAN performance, or
    availability. The protocol provides security with abort only; 5
    attack-induced aborts and 1 infrastructure abort were observed.
-5. Differential privacy or resistance to inference attacks: neither is
-   implemented.
+5. Differential privacy or resistance to inference attacks. Neither is
+   implemented, and E6 shows that secure aggregation alone does not prevent
+   reconstruction of individual training images from the aggregate of a small
+   cohort. Membership and property inference were not evaluated.
 6. Feasibility for large models: the CIFAR CNN is only extrapolated.
 7. Small effects: with 2–3 seeds, differences below the 95 % interval widths
    cannot be resolved.

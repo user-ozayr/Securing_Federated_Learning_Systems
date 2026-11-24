@@ -1,0 +1,4 @@
+    from click.utils import get_text_stream as get_text_stream
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+143 passed, 1 skipped, 2 warnings in 6.97s
