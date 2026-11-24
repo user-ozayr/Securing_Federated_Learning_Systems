@@ -1,0 +1,5 @@
+Command: pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/fl-security-wheel-check .
+Result: PASS; fl_security-0.3.0-py3-none-any.whl
+SHA-256: f740957160ecd4e275cedc4ffb2d56dec9d54d3a049c59451c96beea9e541ab1
+Archive inspection: includes mp_spdz.py and spdz2k_weighted_sum.mpc; excludes additive_sharing.py, aggregator_server.py, and client_sharing.py.
+Note: python -m build was unavailable because the build module is not installed; pip wheel succeeded without installing dependencies.
