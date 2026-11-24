@@ -1,0 +1,21 @@
+scenario,mode,threshold,clients,dimension,mpc_matches_reference_exactly,threshold_norm,accepted,clip_flags,aggregate_norm,output_check_passed,expected_output_check,max_abs_error_vs_ideal_float_clipping,end_to_end_seconds,protocol_seconds_party0,global_data_sent_mb
+clean_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",0.3217613255301024,True,True,0.0,11.371827274007956,7.39425,1273.25
+scaled_replacement_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.3266411566751772,True,True,0.011045857371498366,10.421593154023867,6.77458,1273.25
+boundary_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[1, 0, 0, 1]",0.3371899951604076,True,True,0.0010306514744028439,10.344617855007527,6.76538,1273.25
+adaptive_clip_screen,clip_screen,adaptive,4,300,True,0.49997873931625003,"[1, 1, 1, 0]","[0, 0, 1, 0]",0.2768210942503258,True,True,0.00018867733251730703,12.140694699977757,8.02436,1533.71
+adaptive_screen_only,screen,adaptive,4,300,True,0.49997996126193356,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.28900940796999247,True,True,0.0,8.800107129005482,4.81947,827.943
+sample_weighted_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.4759813297798016,True,True,0.01012317299463654,10.438142380007776,6.75288,1273.25
+malformed_out_of_range,clip,static,4,300,True,1.0,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.32606555947152543,True,True,0.0,10.366822957003023,6.71919,1273.21
+wrap_large_coordinate,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",16777215.992874147,False,False,16777216.002375286,10.391048657998908,6.73807,1273.25
+malformed_negative_square,clip,static,4,300,True,1.0,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.35468025286473864,True,True,0.0,10.32244491300662,6.71584,1273.21
+wrap_single_attacker,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",65536.00679070645,False,False,65535.99773661295,10.442849376006052,6.74298,1273.25
+inverse_weight_trick,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.2966772034014233,True,True,0.018819102534541374,10.382892424007878,6.70384,1273.25
+colluding_cancellation_k4,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",1.4249190957177038,False,,0.244049072265625,10.467080437025288,6.81602,1273.25
+colluding_cancellation_k8,clip,static,8,300,True,1.0,"[1, 1, 1, 1, 1, 1, 1, 1]","[0, 0, 0, 0, 0, 0, 0, 0]",0.7245165447402038,True,,0.14670562744140625,18.523712719994364,13.0873,2574.31
+direction_honest,clip_screen,adaptive,4,300,True,0.49998196554442353,"[1, 1, 1, 1]","[0, 0, 1, 1]",0.42590670931553315,True,True,0.00019274285922507572,30.14282555700629,25.7461,5118.88
+direction_sign_flip,clip_screen,adaptive,4,300,True,0.4999930038558735,"[1, 1, 1, 0]","[0, 0, 1, 0]",0.42066289555565906,True,True,0.0001957172230539761,29.934427644009702,25.5315,5118.84
+direction_and_norm,clip_screen,adaptive,5,300,True,0.5000208723658867,"[1, 1, 1, 0, 0]","[0, 0, 1, 0, 0]",0.42328517117105835,True,True,0.00018715263754826017,36.76146582898218,31.9756,6420.91
+direction_malformed_signs,clip_screen,adaptive,4,300,True,0.5000061317902325,"[1, 1, 1, 0]","[0, 0, 1, 0]",0.424222351995154,True,,0.00020234164456994774,30.303051509021316,25.8521,5118.84
+direction_all_coordinates,clip_screen,adaptive,4,300,True,0.4999858474218607,"[1, 1, 1, 0]","[0, 1, 1, 0]",0.42260696327499203,True,True,0.0006362050248919088,81.82496210499085,77.0447,15624.2
+direction_three_clients_ties,clip_screen,adaptive,3,300,True,0.5000112875021966,"[0, 0, 0]","[0, 0, 0]",0.0,True,True,0.0,22.893719468003837,19.1106,3714.5
+direction_k8_two_flipped,clip_screen,adaptive,8,300,True,0.4999874977694526,"[1, 1, 1, 1, 1, 1, 0, 0]","[1, 0, 0, 0, 1, 1, 0, 0]",0.43996930658554706,True,True,0.0005839713517295647,59.33533291297499,52.8077,10556.9

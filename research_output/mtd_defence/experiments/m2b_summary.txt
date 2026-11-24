@@ -1,0 +1,6 @@
+           attack         condition  seeds  accuracy_mean  asr_mean  asr_min  asr_max  direction_tpr_mean  direction_fpr_mean  rejection_tpr_mean  rejection_fpr_mean
+             none reference_defence      1          0.833     0.024    0.024    0.024                 NaN                 0.0                 NaN                 0.0
+       label_flip reference_defence      1          0.828     0.025    0.025    0.025                 0.0                 0.0                 0.8                 0.0
+         backdoor reference_defence      1          0.830     0.025    0.025    0.025                 0.0                 0.0                 1.0                 0.0
+adaptive_backdoor reference_defence      1          0.825     0.417    0.417    0.417                 0.0                 0.0                 0.0                 0.0
+ evasive_backdoor reference_defence      1          0.826     0.125    0.125    0.125                 0.0                 0.0                 0.0                 0.0

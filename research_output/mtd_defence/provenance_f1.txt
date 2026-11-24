@@ -1,0 +1,12 @@
+base commit: 14b7bb541445a39cd9995ecec9cf4c085daabb8a
+ M src/fl_security/attacks/byzantine.py
+ M src/fl_security/experiments/analysis.py
+ M src/fl_security/experiments/grid.py
+ M src/fl_security/federated/flower_simulation.py
+ M src/fl_security/smpc/mp_spdz.py
+ M src/fl_security/smpc/mp_spdz_party_service.py
+ M src/fl_security/smpc/programs/spdz2k_robust_aggregate.mpc
+ M src/fl_security/smpc/robust.py
+ M src/fl_security/smpc/validation.py
+?? research_output/mtd_defence/
+?? tests/test_direction_screen.py

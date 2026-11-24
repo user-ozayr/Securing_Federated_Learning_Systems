@@ -56,7 +56,10 @@ def _defence_config(config: dict) -> SecureDefenceConfig | None:
     return SecureDefenceConfig.from_mapping(raw) if raw else None
 
 
-def _compute_defence_reference(config_obj: SecureDefenceConfig, ids, deltas, counts):
+def _compute_defence_reference(
+    config_obj: SecureDefenceConfig, ids, deltas, counts, direction=None
+):
+    """Recompute a defended round, applying its recorded direction screen when present."""
     order = sorted(range(len(ids)), key=lambda i: ids[i])
     weights = config_obj.quantized_weights([int(counts[i]) for i in order])
     spec = config_obj.round_spec(weights)
@@ -64,7 +67,12 @@ def _compute_defence_reference(config_obj: SecureDefenceConfig, ids, deltas, cou
         [int(v) for v in np.round(deltas[i] * config_obj.scale).astype(np.int64).tolist()]
         for i in order
     ]
-    result = robust_reference(inputs, weights, spec)
+    if direction is not None:
+        values = [int(v) for v in np.asarray(direction).tolist()]
+        result = robust_reference(inputs, weights, spec, direction_indices=values[1:],
+                                  min_agree=values[0])
+    else:
+        result = robust_reference(inputs, weights, spec)
     decoded = decode_robust_output(result, weights, config_obj)
     coefficient = {}
     one_g = 1 << config_obj.clip_bits
@@ -129,14 +137,18 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
     rounds_data: dict[int, tuple[list, list, list, list]] = {}
     for path in sorted(instrumentation.glob("r*_c*.npz")):
         with np.load(path) as data:
-            ids, deltas, flags, counts = rounds_data.setdefault(int(path.name[1:5]), ([], [], [], []))
+            ids, deltas, flags, counts = rounds_data.setdefault(
+                int(path.name[1:5]), ([], [], [], [])
+            )
             ids.append(int(path.name.split("_c")[1][:4]))
             deltas.append(data["delta"].astype(np.float64))
             flags.append(bool(data["malicious"]))
             counts.append(int(data["num_examples"]))
     globals_ = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_global.npy")}
+    directions = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_direction.npy")}
     audit = _restrict_to_recorded_cohorts(rounds_data, _recorded_cohorts(frame))
-    summary.update(_summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit)))
+    summary.update(_summarize_rows(
+        run_dir, _round_rows(rounds_data, globals_, config, audit, directions)))
     # Pack the per-client files into one archive (raw evidence) and remove them.
     arrays = {}
     for path in sorted(instrumentation.iterdir()):
@@ -156,10 +168,12 @@ def reanalyze_packed(run_dir: Path, config: dict) -> dict:
     run_dir = Path(run_dir)
     packed = load_instrumentation(run_dir / "instrumentation.npz")
     rounds_data: dict[int, tuple[list, list, list, list]] = {}
-    globals_ = {}
+    globals_, directions = {}, {}
     for key, value in packed.items():
         if key.endswith("_global"):
             globals_[int(key[1:5])] = value
+        elif key.endswith("_direction"):
+            directions[int(key[1:5])] = value
         elif key.endswith("__delta"):
             stem = key[: -len("__delta")]
             ids, deltas, flags, counts = rounds_data.setdefault(int(stem[1:5]), ([], [], [], []))
@@ -174,7 +188,7 @@ def reanalyze_packed(run_dir: Path, config: dict) -> dict:
     results = next(run_dir.glob("*_results.csv"), None)
     cohorts = _recorded_cohorts(pd.read_csv(results)) if results is not None else {}
     audit = _restrict_to_recorded_cohorts(rounds_data, cohorts)
-    return _summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit))
+    return _summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit, directions))
 
 
 def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
@@ -199,8 +213,11 @@ def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
     return summary
 
 
-def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | None = None) -> list[dict]:
+def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | None = None,
+                directions: dict | None = None) -> list[dict]:
     defence = _defence_config(config)
+    directions = directions or {}
+    screened = defence is not None and defence.direction_check
     smpc = config.get("smpc", {}) or {}
     sum_only = bool(smpc.get("enabled")) and defence is None
     rows = []
@@ -228,21 +245,31 @@ def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | N
             row["deviation_from_honest_relative"] = row["deviation_from_honest"] / reference_norm
             row["cosine_with_honest"] = float(
                 np.dot(applied, honest_fedavg) / max(_vector_norm(applied) * reference_norm, 1e-12))
-        def weighted_update_norm(indices: list[int], coefficients: dict[int, float]) -> float:
+        def weighted_update_norm(
+            indices: list[int], coefficients: dict[int, float], updates: np.ndarray
+        ) -> float:
             if not indices:
                 return 0.0
-            weighted_update = sum(coefficients[index] * stacked[index] for index in indices)
+            weighted_update = sum(coefficients[index] * updates[index] for index in indices)
             return _vector_norm(weighted_update)
 
         submitted = {i: weights[i] for i in range(len(ids))}
-        m = weighted_update_norm(malicious, submitted)
-        h = weighted_update_norm(honest, submitted)
+        m = weighted_update_norm(malicious, submitted, stacked)
+        h = weighted_update_norm(honest, submitted, stacked)
         row["malicious_share_submitted"] = m / (m + h) if (m + h) > 0 else 0.0
+        if screened and round_num not in directions:
+            # This secret subset was not recorded, so the round cannot be recomputed.
+            # Leave the reference-error fields unset.
+            row["reference_kind"] = "robust_reference_unavailable"
+            row.update(check)
+            rows.append(row)
+            continue
         if defence is not None:
-            recomputed, coefficient, decoded = _compute_defence_reference(defence, ids, stacked, counts)
+            recomputed, coefficient, decoded = _compute_defence_reference(
+                defence, ids, stacked, counts, directions.get(round_num) if screened else None)
             effective = {i: coefficient[ids[i]] for i in range(len(ids))}
-            m = weighted_update_norm(malicious, effective)
-            h = weighted_update_norm(honest, effective)
+            m = weighted_update_norm(malicious, effective, stacked)
+            h = weighted_update_norm(honest, effective, stacked)
             row["malicious_share_effective"] = m / (m + h) if (m + h) > 0 else 0.0
             row["reference_output_check_passed"] = int(decoded.output_check_passed)
             reference = recomputed if recomputed is not None else np.zeros_like(applied)

@@ -1,0 +1,6 @@
+                 attack          condition  seeds  accuracy_mean  asr_mean  asr_min  asr_max  direction_tpr_mean  direction_fpr_mean  rejection_tpr_mean  rejection_fpr_mean
+                   none smpc_direction_mtd      3          0.833     0.019    0.015    0.023                 NaN               0.010                 NaN               0.010
+             label_flip smpc_direction_mtd      3          0.833     0.022    0.013    0.029               0.307               0.051               0.877               0.051
+      adaptive_backdoor smpc_direction_mtd      3          0.822     0.217    0.019    0.599               0.300               0.032               0.300               0.032
+       evasive_backdoor smpc_direction_mtd      3          0.825     0.153    0.040    0.324               0.044               0.032               0.044               0.032
+adaptive_backdoor__jit4 smpc_direction_mtd      3          0.810     0.680    0.586    0.832               0.014               0.000               0.044               0.000

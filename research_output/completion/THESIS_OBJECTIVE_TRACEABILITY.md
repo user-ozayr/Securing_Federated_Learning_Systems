@@ -185,3 +185,46 @@ otherwise.
   * A fresh clone reproduces two experiments identically and passes all tests.
   * 228/228 configurations are consistent with the final grid.
   * A SHA-256 manifest covers every evidence file.
+
+## Extension — moving-target direction screen (branch `research/mtd-defence`)
+
+The extension targets the thesis's main concern, model poisoning, with the
+MTD idea applied inside the SPDZ2k defence. Full results:
+`research_output/mtd_defence/MTD_DEFENCE_REPORT.md`. Experiment IDs: **M1**
+(direction screen, τ 0.5), **M2/M2b** (τ 0.52, 3 seeds), **M3** (cohort bound
+K = 7), **P3** (paired M3, 5 seeds), **F1** (final framework in SPDZ2k), **V′**
+(20 validation scenarios), **B′** (screen cost).
+
+| Item | Evidence |
+|---|---|
+| Component | in-MPC sign-agreement screen on an HMAC-selected secret coordinate subset, combined with the adaptive clip+screen; paired-secret evaluation mode; evasive attacker |
+| Source | `smpc/robust.py` (`direction_screen`, `direction_indices`, `validate_direction`), `smpc/programs/spdz2k_robust_aggregate.mpc`, `smpc/mp_spdz.py`, `smpc/mp_spdz_party_service.py`, `federated/flower_simulation.py`, `attacks/byzantine.py` (`evasive_backdoor`), `experiments/suite.py` (paired secrets), `experiments/grid.py` |
+| Tests | `test_direction_screen.py` (24), `test_paired_secrets.py` (4); `smpc/validation.py` direction scenarios |
+| Objectives | 2 (new defence and new adaptive attacker), 4 (MTD applied to the checked coordinates and evaluated against a schedule-targeting adversary), 5 (configuration `smpc_direction_mtd`) |
+
+**Findings.**
+* *Correctness (V′, F1):* 20/20 SPDZ2k scenarios are bit-exact. In every round
+  of 15 FL runs, the SPDZ2k aggregate equals the plaintext reference to
+  ≤ 1.2·10⁻⁷.
+* *Cost (B′):* the secret 25 % subset costs about 6 × the norm defence per round
+  (148 s vs 21 s protocol time at d = 2,202, K = 4).
+* *Static cohorts, K = 4 (M2/M2b, 3 seeds):* the secret 25 % screen lowers the
+  adaptive backdoor's ASR from 0.193 to 0.056 and raises label-flip rejection
+  from 0.77 to 0.93. Honest FPR is 2.5 %.
+* *Paired, K = 7 (P3, 5 seeds):* secret MTD + secret screen has the lowest mean
+  ASR against every attacker.
+
+  | Attacker | Static, norm only | Secret MTD only | MTD + screen |
+  |---|---|---|---|
+  | Adaptive backdoor | 0.493 | 0.239 | 0.132 |
+  | Evasive backdoor | 0.177 | 0.143 | 0.067 |
+  | Just-in-time (4 corrupted) | 0.979 | 0.651 | 0.568 |
+
+  Against the just-in-time adversary the protection comes from the secret
+  schedule; with a static schedule, accuracy is 0.66 and the screen adds
+  nothing.
+* *Update to Objective 4's status:* MTD alone is still not a detector. Against
+  an adversary that targets the schedule, however, it measurably reduces
+  poisoning: in P3, ASR falls from 0.98 to 0.65 and accuracy rises from 0.66
+  to 0.82.
+* *Limits:* see `SECURITY_LIMITATIONS.md` §E (items 24–30).

@@ -39,8 +39,13 @@ try:
     round_arguments = list(ROUND_ARGUMENTS)
 except NameError:
     round_arguments = list(program.args[1:])
-if len(round_arguments) != 8:
-    raise ValueError("robust secure aggregation expects eight round arguments")
+if len(round_arguments) not in (8, 10):
+    raise ValueError("robust secure aggregation expects eight or ten round arguments")
+# Arguments 9 and 10 (optional) enable the direction screen: the minimum sign
+# agreement and the checked coordinate indices, drawn per round by the
+# coordinator from a secret key and given to the parties only.
+direction_enabled = len(round_arguments) == 10
+SIGN_TEST_BITS = 32
 
 selected_ids = _ints(round_arguments[0])
 expected_counts = _ints(round_arguments[1])
@@ -100,6 +105,9 @@ if (
     or r_max >= (1 << 62)
 ):
     raise ValueError("invalid robust secure aggregation arguments")
+if direction_enabled and r_max >= (1 << (2 * (SIGN_TEST_BITS - 1))):
+    # a valid coordinate satisfies x^2 <= R <= r_max < 2^62, i.e. |x| < 2^31
+    raise ValueError("validity bound too large for the 32-bit sign test")
 
 one_g = 1 << clip_bits
 max_weight_squared = max(weights) ** 2
@@ -112,6 +120,20 @@ if (
     or static_t * max_weight_squared * rho2 >= (1 << 62)
 ):
     raise ValueError("robust secure aggregation parameters exceed the 2^62 bit budget")
+
+if direction_enabled:
+    min_agree = int(round_arguments[8])
+    direction_indices = _ints(round_arguments[9])
+    subset_size = len(direction_indices)
+    if (
+        subset_size < 1
+        or subset_size > dimension
+        or direction_indices != sorted(set(direction_indices))
+        or direction_indices[0] < 0
+        or direction_indices[-1] >= dimension
+        or not 1 <= min_agree <= subset_size
+    ):
+        raise ValueError("invalid direction screen arguments")
 
 num_chunks = (input_count + chunk_size - 1) // chunk_size
 padded_count = num_chunks * chunk_size
@@ -204,6 +226,40 @@ if adaptive:
 else:
     threshold = sint(static_t)
 
+# ---- direction screen (moving target) ------------------------------------------
+# On each checked coordinate j: b_kj = [x_kj >= 0] (sign bit of the ring value);
+# the others' majority is [2 * (sum_i b_ij - b_kj) >= K - 1]; client k passes
+# when its sign agrees with that majority on at least min_agree coordinates.
+direction_ok = [sint(1)] * client_count
+if direction_enabled:
+    index_array = Array(subset_size, regint)
+    index_array.assign([1 + j for j in direction_indices])  # row[0] is the sample count
+    sign_bits = []
+    for k in range(client_count):
+        gathered = sint.Array(subset_size)
+        row_k = inputs[k]
+
+        @for_range(subset_size)
+        def _(i):
+            gathered[i] = row_k[index_array[i]]
+
+        # 32-bit sign test: exact for every coordinate a valid update can have
+        # (|x| <= max_valid_norm * 2^f < 2^31); for a malformed value it is some
+        # bit, which gives no more power than choosing the sign directly.
+        sign_bits.append(1 - gathered.get_vector().less_than(0, bit_length=SIGN_TEST_BITS))
+    positives = sign_bits[0]
+    for k in range(1, client_count):
+        positives = positives + sign_bits[k]
+    small_bits = (2 * client_count).bit_length() + 2
+    count_bits = subset_size.bit_length() + 2
+    direction_ok = []
+    for k in range(client_count):
+        others_twice = (positives - sign_bits[k]) * 2
+        majority = 1 - others_twice.less_than(client_count - 1, bit_length=small_bits)
+        agree = 1 - sign_bits[k] - majority + 2 * sign_bits[k] * majority
+        agreement = sum(agree[i] for i in range(subset_size))
+        direction_ok.append(1 - agreement.less_than(min_agree, bit_length=count_bits))
+
 # ---- screening and clipping ------------------------------------------------------
 accept = []
 coefficient = []
@@ -228,6 +284,8 @@ for k in range(client_count):
     else:
         c_k = sint(one_g)
         clipped.append(sint(0))
+    if direction_enabled:
+        a_k = a_k * direction_ok[k]
     accept.append(a_k)
     coefficient.append(c_k)
 
@@ -245,7 +303,7 @@ for k in range(client_count):
         else:
             totals.assign_vector(totals.get_vector() + vector * (one_g * weights[k]))
 
-header = 2 + 2 * client_count
+header = 2 + (3 if direction_enabled else 2) * client_count
 result = sint.Array(header + dimension)
 if adaptive:
     result[0] = threshold
@@ -261,6 +319,9 @@ for k in range(client_count):
         result[2 + client_count + k] = clipped[k] * accept[k]
     else:
         result[2 + client_count + k] = sint(0)
+    if direction_enabled:
+        # direction rejections; revealed in the evaluation setting only
+        result[2 + 2 * client_count + k] = (1 - direction_ok[k]) if reveal_flags else sint(0)
 result.assign(totals, header)
 
 output_socket = accept_client_connection(client_port_base)

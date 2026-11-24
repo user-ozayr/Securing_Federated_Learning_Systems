@@ -1,0 +1,17 @@
+                 attack                          condition  seeds  accuracy_mean  asr_mean  asr_min  asr_max  direction_tpr_mean  direction_fpr_mean  rejection_tpr_mean  rejection_fpr_mean
+                   none                  reference_defence      5          0.835     0.020    0.017    0.026                 NaN               0.000                 NaN               0.000
+                   none     reference_direction_secret_t52      5          0.833     0.020    0.012    0.026                 NaN               0.020                 NaN               0.020
+                   none              reference_defence_mtd      5          0.834     0.019    0.008    0.027                 NaN               0.000                 NaN               0.000
+                   none reference_direction_secret_mtd_t52      5          0.835     0.018    0.008    0.027                 NaN               0.020                 NaN               0.020
+      adaptive_backdoor                  reference_defence      5          0.823     0.493    0.329    0.661               0.000               0.000               0.000               0.000
+      adaptive_backdoor     reference_direction_secret_t52      5          0.820     0.314    0.026    0.517               0.110               0.020               0.110               0.020
+      adaptive_backdoor              reference_defence_mtd      5          0.820     0.239    0.078    0.666               0.000               0.000               0.000               0.000
+      adaptive_backdoor reference_direction_secret_mtd_t52      5          0.820     0.132    0.041    0.267               0.109               0.004               0.109               0.004
+       evasive_backdoor                  reference_defence      5          0.823     0.177    0.023    0.384               0.000               0.000               0.000               0.000
+       evasive_backdoor     reference_direction_secret_t52      5          0.822     0.085    0.019    0.132               0.130               0.020               0.130               0.020
+       evasive_backdoor              reference_defence_mtd      5          0.823     0.143    0.044    0.391               0.000               0.000               0.000               0.000
+       evasive_backdoor reference_direction_secret_mtd_t52      5          0.825     0.067    0.044    0.114               0.077               0.008               0.077               0.008
+adaptive_backdoor__jit4                  reference_defence      5          0.662     0.979    0.934    0.999               0.000               0.000               0.000               0.000
+adaptive_backdoor__jit4     reference_direction_secret_t52      5          0.662     0.979    0.934    0.999               0.000               0.000               0.000               0.000
+adaptive_backdoor__jit4              reference_defence_mtd      5          0.816     0.651    0.334    0.911               0.000               0.000               0.015               0.000
+adaptive_backdoor__jit4 reference_direction_secret_mtd_t52      5          0.819     0.568    0.335    0.858               0.096               0.022               0.111               0.022

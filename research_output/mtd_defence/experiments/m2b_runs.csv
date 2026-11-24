@@ -1,0 +1,6 @@
+condition,attack,seed,status,rounds,accuracy,asr,malicious_participations,direction_tpr,direction_fpr,rejection_tpr,rejection_fpr
+reference_defence,adaptive_backdoor,103,completed,10,0.8251,0.4171111111111111,10,0.0,0.0,0.0,0.0
+reference_defence,backdoor,103,completed,10,0.8295333333333333,0.025222222222222222,10,0.0,0.0,1.0,0.0
+reference_defence,evasive_backdoor,103,completed,10,0.8262999999999999,0.125,10,0.0,0.0,0.0,0.0
+reference_defence,label_flip,103,completed,10,0.8278,0.024555555555555556,10,0.0,0.0,0.8,0.0
+reference_defence,none,103,completed,10,0.8328666666666668,0.023555555555555555,0,,0.0,,0.0

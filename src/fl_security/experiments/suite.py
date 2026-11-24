@@ -1,16 +1,23 @@
-"""Resumable execution of the experiment grid.
+"""Run and resume the configured experiment grid.
 
-Each run is executed in a separate process group (``run_experiment.py``) with a
-timeout, so Ray and MP-SPDZ state cannot leak between runs. For secret-derived
-MTD schedules a fresh random FL_MTD_SECRET is generated per run; only its
-SHA-256 commitment is stored. Completed runs are skipped when the suite is
-restarted. Before an unfinished run is repeated, the files of the earlier
-attempt are moved to ``failed_attempts/<UTC stamp>_auto/`` so that the repeat
-starts from an empty directory.
+Each experiment runs in its own process group. If it times out, Ray and MP-SPDZ
+state are cleaned up before the next run. Unpaired MTD runs receive a fresh
+random FL_MTD_SECRET; the metadata stores only its SHA-256 commitment.
+
+Paired studies derive one secret for each (study, seed), so every condition in
+that pair sees the same secret cohorts and direction subsets. This common-random
+number setup uses a 32-byte suite key stored on the host as pairing_key with
+mode 0600. The simulated adversary never receives that key.
+
+Completed runs are skipped on restart. Before an unfinished run is retried,
+its files move to failed_attempts/<UTC stamp>_auto/ so the retry starts in an
+empty directory.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import json
 import os
 import platform
@@ -80,7 +87,33 @@ def set_aside_previous_attempt(run_dir: Path, output_root: Path, study: str) -> 
     return target
 
 
-def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
+PAIRING_KEY_FILE = "pairing_key"
+
+
+def load_pairing_key(output_root: Path) -> bytes:
+    """The suite's pairing key; created once (32 random bytes, mode 0600) so that a
+    resumed suite derives the same per-seed secrets."""
+    path = output_root / PAIRING_KEY_FILE
+    if not path.exists():
+        output_root.mkdir(parents=True, exist_ok=True)
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="ascii") as handle:
+            handle.write(secrets.token_hex(32))
+    key = bytes.fromhex(path.read_text(encoding="ascii").strip())
+    if len(key) != 32:
+        raise ValueError(f"{path} must hold 32 bytes in hex")
+    return key
+
+
+def paired_secret(pairing_key: bytes, study: str, seed: int) -> str:
+    """FL_MTD_SECRET shared by every condition of (study, seed); 43 characters."""
+    digest = hmac.new(pairing_key, f"paired-mtd-secret|{study}|seed={int(seed)}".encode("utf-8"),
+                      hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+
+def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int,
+            pairing_key: bytes | None = None) -> dict:
     run_dir = output_root / "runs" / spec.study / spec.run_id
     previous_attempt = set_aside_previous_attempt(run_dir, output_root, spec.study)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -102,7 +135,15 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
     })
     commitment = None
     env.pop("FL_MTD_SECRET", None)
-    if spec.needs_secret:
+    paired = bool(spec.tags.get("paired"))
+    if paired and (spec.needs_secret or spec.uses_secret_subset):
+        if pairing_key is None:
+            raise ValueError(f"{spec.run_id} is paired but no pairing key was supplied")
+        secret = paired_secret(pairing_key, spec.study, spec.seed)
+        env["FL_MTD_SECRET"] = secret
+        commitment = hashlib.sha256(secret.encode("utf-8")).hexdigest()
+        del secret
+    elif spec.needs_secret:
         secret = secrets.token_urlsafe(48)
         env["FL_MTD_SECRET"] = secret
         commitment = hashlib.sha256(secret.encode("utf-8")).hexdigest()
@@ -116,6 +157,9 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
         "attack": spec.attack, "seed": spec.seed, "uses_mpc": spec.uses_mpc,
         "mtd_schedule": config.get("mtd", {}).get("schedule"),
         "mtd_secret_sha256_commitment": commitment,
+        "paired_secret": paired and commitment is not None,
+        "pairing_key_sha256": (hashlib.sha256(pairing_key).hexdigest()
+                               if paired and pairing_key is not None else None),
         "config_sha256": hashlib.sha256(config_text.encode("utf-8")).hexdigest(),
         "git_commit": _git_output("rev-parse", "HEAD"),
         "git_dirty": bool(_git_output("status", "--porcelain", "--untracked-files=no")),
@@ -186,6 +230,8 @@ def run_suite(output_root: Path, studies: list[str] | None, timeout_seconds: int
         runs = [run for run in runs if run.condition in selected_conditions]
     progress = output_root / "suite_progress.jsonl"
     output_root.mkdir(parents=True, exist_ok=True)
+    pairing_key = (load_pairing_key(output_root)
+                   if not dry_run and any(run.tags.get("paired") for run in runs) else None)
     executed = 0
     for index, spec in enumerate(runs, 1):
         meta_path = output_root / "runs" / spec.study / spec.run_id / "run_metadata.json"
@@ -202,7 +248,7 @@ def run_suite(output_root: Path, studies: list[str] | None, timeout_seconds: int
         if max_runs is not None and executed >= max_runs:
             break
         print(f"[{index}/{len(runs)}] {spec.run_id}", flush=True)
-        metadata = run_one(spec, output_root, timeout_seconds)
+        metadata = run_one(spec, output_root, timeout_seconds, pairing_key)
         executed += 1
         with progress.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps({k: metadata[k] for k in (

@@ -1,0 +1,176 @@
+[
+  {
+    "scenario": "bench_none_r0",
+    "subset_size": 0,
+    "bit_exact": true,
+    "end_to_end_seconds": 25.85,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 21.2806,
+        "party_data_sent_mb": 1432.2,
+        "party_rounds": 3706.0,
+        "global_data_sent_mb": 4290.6
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 21.2827,
+        "party_data_sent_mb": 1429.2,
+        "party_rounds": 2987.0,
+        "global_data_sent_mb": 4290.6
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 21.2829,
+        "party_data_sent_mb": 1429.2,
+        "party_rounds": 2906.0,
+        "global_data_sent_mb": 4290.6
+      }
+    ]
+  },
+  {
+    "scenario": "bench_none_r1",
+    "subset_size": 0,
+    "bit_exact": true,
+    "end_to_end_seconds": 24.93,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 20.8214,
+        "party_data_sent_mb": 1432.2,
+        "party_rounds": 3706.0,
+        "global_data_sent_mb": 4290.6
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 20.8208,
+        "party_data_sent_mb": 1429.2,
+        "party_rounds": 2989.0,
+        "global_data_sent_mb": 4290.6
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 20.821,
+        "party_data_sent_mb": 1429.2,
+        "party_rounds": 2906.0,
+        "global_data_sent_mb": 4290.6
+      }
+    ]
+  },
+  {
+    "scenario": "bench_10pct_r0",
+    "subset_size": 220,
+    "bit_exact": true,
+    "end_to_end_seconds": 76.1,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 71.4367,
+        "party_data_sent_mb": 4809.3,
+        "party_rounds": 12316.0,
+        "global_data_sent_mb": 14406.7
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 71.4361,
+        "party_data_sent_mb": 4798.73,
+        "party_rounds": 10361.0,
+        "global_data_sent_mb": 14406.7
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 71.4357,
+        "party_data_sent_mb": 4798.73,
+        "party_rounds": 10098.0,
+        "global_data_sent_mb": 14406.7
+      }
+    ]
+  },
+  {
+    "scenario": "bench_10pct_r1",
+    "subset_size": 220,
+    "bit_exact": true,
+    "end_to_end_seconds": 74.15,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 69.3156,
+        "party_data_sent_mb": 4672.73,
+        "party_rounds": 12108.0,
+        "global_data_sent_mb": 13997.7
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 69.3116,
+        "party_data_sent_mb": 4662.49,
+        "party_rounds": 10183.0,
+        "global_data_sent_mb": 13997.7
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 69.3091,
+        "party_data_sent_mb": 4662.49,
+        "party_rounds": 9924.0,
+        "global_data_sent_mb": 13997.7
+      }
+    ]
+  },
+  {
+    "scenario": "bench_25pct_r0",
+    "subset_size": 550,
+    "bit_exact": true,
+    "end_to_end_seconds": 155.77,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 149.793,
+        "party_data_sent_mb": 9954.82,
+        "party_rounds": 24811.0,
+        "global_data_sent_mb": 29820.3
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 149.786,
+        "party_data_sent_mb": 9932.73,
+        "party_rounds": 21156.0,
+        "global_data_sent_mb": 29820.3
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 149.784,
+        "party_data_sent_mb": 9932.73,
+        "party_rounds": 20609.0,
+        "global_data_sent_mb": 29820.3
+      }
+    ]
+  },
+  {
+    "scenario": "bench_25pct_r1",
+    "subset_size": 550,
+    "bit_exact": true,
+    "end_to_end_seconds": 151.17,
+    "party_statistics": [
+      {
+        "party_id": 0,
+        "protocol_seconds": 145.313,
+        "party_data_sent_mb": 9715.9,
+        "party_rounds": 24443.0,
+        "global_data_sent_mb": 29104.6
+      },
+      {
+        "party_id": 1,
+        "protocol_seconds": 145.313,
+        "party_data_sent_mb": 9694.36,
+        "party_rounds": 20842.0,
+        "global_data_sent_mb": 29104.6
+      },
+      {
+        "party_id": 2,
+        "protocol_seconds": 145.31,
+        "party_data_sent_mb": 9694.36,
+        "party_rounds": 20309.0,
+        "global_data_sent_mb": 29104.6
+      }
+    ]
+  }
+]

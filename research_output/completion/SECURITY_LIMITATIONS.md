@@ -111,10 +111,42 @@ read more broadly than it supports.
     host that limits a robust round to about 100,000 parameters (measured), and
     the 2.12 M-parameter CIFAR CNN is only extrapolated (about 3.4 h per round).
 
-## E. Claims that must not be made from this evidence
+## E. Moving-target direction screen (branch `research/mtd-defence`)
+
+Details in `research_output/mtd_defence/MTD_DEFENCE_REPORT.md`.
+
+24. **Detection scope.** The sign-agreement screen catches direction changes
+    (label flip: 88–93 % of attacker participations rejected). Norm-constrained
+    backdoors are rejected in only 10–35 % of participations, and an evasive
+    attacker that copies clean values into a guessed 25 % of the coordinates
+    is rejected in 4–13 %.
+25. **Honest majority required.** The majority-of-others vote and the median
+    threshold both fail when attackers are at least half of a cohort. Random
+    cohorts of 4 out of 12 with 3 attackers contain two or more attackers in
+    about 24 % of rounds; MTD reduces how often a *targeting* adversary
+    reaches a majority but cannot exclude it.
+26. **Cost.** A secret 25 % subset costs about 6 × the norm defence per round
+    inside SPDZ2k (d = 2,202, K = 4: 148 s vs 21 s protocol time, 29.5 GB vs
+    4.3 GB traffic).
+27. **Secret dependence.** The secret subset relies on `FL_MTD_SECRET`; with a
+    known subset the evasive attacker is as successful as against a public one.
+28. **Pairing.** Only P3 compares MTD conditions on identical secret cohorts;
+    M1–M3 and F1 draw a fresh secret per run, so their MTD-vs-static
+    differences include cohort-draw variance. An M3 conclusion based on such a
+    difference was withdrawn (report §5.3).
+29. **Five seeds.** P3's paired differences are consistent in direction, but
+    sign tests over five seeds reach p = 0.031 (one-sided) at best, and the
+    comparisons against "secret MTD, norm only" are not significant.
+30. **Hidden threshold** (item 22). The pilot shows that the adaptive attacker's
+    norm equals the honest-median threshold (1.00 × T), so hiding or moving
+    the norm threshold alone would not separate it.
+
+## F. Claims that must not be made from this evidence
 
 * that SPDZ2k (or the framework) *prevents* poisoning;
 * that MTD guarantees exclusion of malicious clients;
-* differential privacy or resistance to inference attacks (E6 shows
-  reconstruction from the secure aggregate);
+* that the direction screen detects stealthy (norm-constrained) backdoors
+  reliably, or that the MTD + screen combination is significantly better
+  than secret MTD alone;
+* differential privacy or resistance to inference attacks;
 * production readiness, cross-host security, or full-CIFAR-scale secure training.

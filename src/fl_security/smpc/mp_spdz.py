@@ -323,6 +323,7 @@ def receive_robust_result(
     output_client_id: int,
     client_count: int,
     dimension: int,
+    direction: bool = False,
 ):
     """Receive the robust program's header and weighted sum as the output client."""
     from fl_security.smpc.robust import result_from_outputs
@@ -338,10 +339,11 @@ def receive_robust_result(
     client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(client_class, hosts, port_base, output_client_id, credentials_dir)
     try:
-        outputs = client.receive_outputs(2 + 2 * client_count + dimension)
+        outputs = client.receive_outputs(
+            2 + (3 if direction else 2) * client_count + dimension)
     finally:
         _close_client(client)
-    return result_from_outputs(outputs, client_count, dimension)
+    return result_from_outputs(outputs, client_count, dimension, direction=direction)
 
 
 def receive_weighted_average(
@@ -494,6 +496,7 @@ def start_round(
     weights: Sequence[int] | None = None,
     robust_spec: Sequence[int] | None = None,
     chunk_size: int | None = None,
+    direction: Mapping[str, object] | None = None,
 ) -> None:
     if program not in ("weighted_sum", "robust_aggregate"):
         raise ValueError("unsupported SPDZ2k program")
@@ -559,6 +562,13 @@ def start_round(
             "robust_spec": [int(value) for value in robust_spec],
             "chunk_size": int(chunk_size),
         })
+        if direction is not None:
+            from fl_security.smpc.robust import validate_direction
+
+            min_agree, indices = validate_direction(direction, int(input_count) - 1)
+            payload["direction"] = {"min_agree": min_agree, "indices": indices}
+    elif direction is not None:
+        raise ValueError("the direction screen requires the robust program")
 
     hashes = []
     try:

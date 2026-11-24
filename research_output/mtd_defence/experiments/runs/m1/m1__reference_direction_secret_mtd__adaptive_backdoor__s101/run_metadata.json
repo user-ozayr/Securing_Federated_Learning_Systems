@@ -1,0 +1,52 @@
+{
+  "run_id": "m1__reference_direction_secret_mtd__adaptive_backdoor__s101",
+  "study": "m1",
+  "condition": "reference_direction_secret_mtd",
+  "attack": "adaptive_backdoor",
+  "seed": 101,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "17374124841f49cde42e94225864078645e0833a4dc83cb180d73473ded58681",
+  "config_sha256": "dd592c87307fd3ffa502c05dcf344ffe79c60f40f0e7879d089fba32efcd2ad0",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_direction_secret_mtd__adaptive_backdoor__s101.yaml",
+  "started_utc": "2026-11-21T00:40:51Z",
+  "load_average_start": [
+    1.224609375,
+    1.4765625,
+    1.53564453125
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.806,
+  "finished_utc": "2026-11-21T00:42:42Z",
+  "load_average_end": [
+    1.4931640625,
+    1.53564453125,
+    1.54931640625
+  ],
+  "analysis": {
+    "final_accuracy": 0.813,
+    "final_loss": 0.5323937959194184,
+    "final_backdoor_asr": 0.5524444444444444,
+    "mean_deviation_from_honest_relative": 0.5071319679447016,
+    "mean_malicious_share_effective": 0.38686104915837555,
+    "mean_malicious_share_submitted": 0.41274862382395644,
+    "mean_reference_max_abs_error": 8.568167686462402e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 8.339982826141356e-08,
+    "max_reference_relative_error": 1.1694770592519434e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.5071319679447016,
+    "mean_malicious_share_submitted": 0.41274862382395644,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}
