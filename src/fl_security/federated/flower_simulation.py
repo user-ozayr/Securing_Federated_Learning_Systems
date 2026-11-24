@@ -1,59 +1,65 @@
-"""Flower simulation with client-side additive sharing to remote aggregation parties."""
+"""Flower simulation with malicious-secure MP-SPDZ SPDZ2k aggregation.
+
+Aggregation paths (selected by configuration):
+
+* plaintext sample-weighted FedAvg (``smpc.enabled: false``);
+* plaintext robust detector (``defences.robust_aggregation``) – reference only;
+* plaintext execution of the norm defence algorithm
+  (``defences.norm_defence_reference``) – reference only, no cryptography;
+* SPDZ2k sum-only weighted aggregation (``smpc.enabled: true``);
+* SPDZ2k robust aggregation with in-MPC clipping/screening
+  (``smpc.enabled: true`` and ``smpc.defence.enabled: true``).
+"""
 from __future__ import annotations
+
 import json
 import os
 import re
 import time
 import uuid
+from collections.abc import Mapping
 from numbers import Integral
+from pathlib import Path
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+
 from fl_security.attacks.byzantine import ByzantineAttacker
 from fl_security.evaluation.metrics import ExperimentLogger
-from fl_security.federated.aggregation import reconstruct_weighted_average, weighted_fedavg
+from fl_security.federated.aggregation import (
+    weighted_fedavg,
+)
+from fl_security.federated.dataset import load_cifar10_data, load_dataset, partition_data
+from fl_security.federated.model import build_model, count_parameters
 from fl_security.federated.robust_aggregation import RobustUpdateDetector
-from fl_security.federated.dataset import load_cifar10_data, partition_data
-from fl_security.federated.model import CIFAR10CNN
 from fl_security.federated.training import evaluate_model, train_local
 from fl_security.mtd.controller import MTDController
-from fl_security.smpc.additive_sharing import DEFAULT_FIELD_MODULUS
-from fl_security.smpc.client_sharing import acknowledge_party, finalize_party, retrieve_party_share, upload_client_update
+from fl_security.smpc.fixed_point import FixedPointEncoder
+from fl_security.smpc.mp_spdz import (
+    SPDZ2K_BACKEND,
+    SPDZ2K_IO_CHUNK_SIZE,
+    abort_round,
+    check_round_running,
+    client_port_base,
+    finish_round,
+    load_party_configuration,
+    receive_robust_result,
+    receive_weighted_average,
+    start_round,
+    submit_client_delta,
+    submit_client_update,
+)
+from fl_security.smpc.robust import (
+    SecureDefenceConfig,
+    apply_delta,
+    decode_robust_output,
+    encode_delta,
+    flatten_delta,
+    robust_reference,
+)
 
-
-def _load_party_configuration() -> dict[str, dict]:
-    raw = os.environ.get("FL_SMPC_AGGREGATORS_JSON", "")
-    if not raw:
-        return {}
-    config = json.loads(raw)
-    if not isinstance(config, dict):
-        raise ValueError("FL_SMPC_AGGREGATORS_JSON must be a JSON object keyed by party ID")
-    normalized = {}
-    for party_id, party in config.items():
-        if not isinstance(party, dict):
-            raise ValueError(f"aggregator party {party_id} must be a JSON object")
-        url, token = str(party.get("url", "")).rstrip("/"), str(party.get("control_token", ""))
-        if not url or not token:
-            raise ValueError(f"aggregator party {party_id} requires url and control_token")
-        normalized[str(int(party_id))] = {"url": url, "control_token": token}
-    return normalized
-
-
-def _load_client_tokens(client_id: int) -> dict[str, str]:
-    """Load credentials from the client runtime, never from Flower round messages."""
-    raw = os.environ.get("FL_SMPC_CLIENT_TOKENS_JSON", "")
-    if not raw:
-        raise RuntimeError("FL_SMPC_CLIENT_TOKENS_JSON is required in each client runtime")
-    config = json.loads(raw)
-    if not isinstance(config, dict):
-        raise ValueError("FL_SMPC_CLIENT_TOKENS_JSON must be a JSON object")
-    nested = config.get(str(client_id))
-    if isinstance(nested, dict):
-        return {str(pid): str(token) for pid, token in nested.items()}
-    if all(isinstance(value, str) for value in config.values()):
-        return {str(pid): str(token) for pid, token in config.items()}
-    raise ValueError(f"no client-local credentials found for client {client_id}")
-
+ROBUST_PROGRAM = "robust_aggregate"
 
 
 def _resolve_authenticated_client_ids(results, proxy_id_by_client, selected_client_ids):
@@ -75,6 +81,7 @@ def _resolve_authenticated_client_ids(results, proxy_id_by_client, selected_clie
 
     selected = {int(client_id) for client_id in selected_client_ids}
     resolved = []
+    seen_logical_ids = set()
     for client_proxy, fit_res in results:
         proxy_id = getattr(client_proxy, "cid", None)
         logical_id = proxy_to_logical.get(str(proxy_id))
@@ -82,9 +89,12 @@ def _resolve_authenticated_client_ids(results, proxy_id_by_client, selected_clie
             raise RuntimeError("Flower returned a result from an unregistered proxy")
         if logical_id not in selected:
             raise RuntimeError("Flower returned a result from a client not selected this round")
+        if logical_id in seen_logical_ids:
+            raise RuntimeError("Flower returned duplicate results for one client")
+        seen_logical_ids.add(logical_id)
 
         metrics = getattr(fit_res, "metrics", {})
-        reported_id = metrics.get("client_id") if isinstance(metrics, dict) else None
+        reported_id = metrics.get("client_id") if isinstance(metrics, Mapping) else None
         if (
             isinstance(reported_id, bool)
             or not isinstance(reported_id, Integral)
@@ -99,8 +109,28 @@ def _resolve_authenticated_client_ids(results, proxy_id_by_client, selected_clie
         raise RuntimeError("Flower returned duplicate client results for a round")
     return resolved
 
+
+def _defence_config(raw, label: str) -> SecureDefenceConfig | None:
+    if not isinstance(raw, Mapping) or not raw.get("enabled", False):
+        return None
+    try:
+        return SecureDefenceConfig.from_mapping(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid {label} configuration: {exc}") from exc
+
+
+def _detection_counts(flags: dict[int, int], malicious: set[int]) -> dict[str, int]:
+    flagged = {cid for cid, value in flags.items() if value}
+    return {
+        "tp": len(flagged & malicious),
+        "fp": len(flagged - malicious),
+        "fn": len((set(flags) & malicious) - flagged),
+        "honest": len(set(flags) - malicious),
+    }
+
+
 def run_flower_simulation(config: dict) -> None:
-    """Run Flower client training; SMPC clients upload shares directly to party services."""
+    """Run Flower with plaintext FedAvg or the configured active SPDZ2k backend."""
     try:
         from flwr.client import NumPyClient
         from flwr.common import FitIns, ndarrays_to_parameters, parameters_to_ndarrays
@@ -116,49 +146,137 @@ def run_flower_simulation(config: dict) -> None:
     num_clients, rounds = int(fl_config["num_clients"]), int(experiment["rounds"])
     seed = int(experiment.get("seed", 42))
     torch.manual_seed(seed)
-    trainset, testset = load_cifar10_data()
-    client_datasets = partition_data(
-        trainset, num_clients, fl_config.get("partitioning", "iid"), seed
+    dataset_name = fl_config.get("dataset", "cifar10")
+    model_name = fl_config.get(
+        "model", "cifar10_cnn" if dataset_name == "cifar10" else "compact_cnn"
     )
-    testloader = DataLoader(testset, batch_size=64, shuffle=False)
+    if dataset_name == "cifar10":
+        trainset, testset = load_cifar10_data()
+    else:
+        trainset, testset = load_dataset(dataset_name, fl_config.get("data_root"))
+    partitioning = fl_config.get("partitioning", "iid")
+    if partitioning == "dirichlet":
+        client_datasets = partition_data(
+            trainset, num_clients, partitioning, seed,
+            alpha=float(fl_config.get("dirichlet_alpha", 0.5)),
+        )
+    else:
+        client_datasets = partition_data(trainset, num_clients, partitioning, seed)
+    testloader = DataLoader(testset, batch_size=int(fl_config.get("eval_batch_size", 64)), shuffle=False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     attacker, mtd = ByzantineAttacker(config, num_clients), MTDController(config)
+    fraction = float(fl_config.get("fraction_train", 1.0))
+
+    attack_config = config.get("attacks", {}) or {}
+    adversary_model = attack_config.get("adversary_model")
+    if attacker.enabled and adversary_model:
+        from fl_security.mtd.exposure import (
+            just_in_time_assignment,
+            predicted_schedule,
+            predictive_set,
+        )
+
+        predicted = predicted_schedule(config, num_clients, rounds, fraction)
+        if adversary_model == "predictive":
+            attacker.set_malicious_clients(
+                predictive_set(predicted, attacker.malicious_count, num_clients, seed)
+            )
+        elif adversary_model == "just_in_time":
+            attacker.set_round_assignment(
+                just_in_time_assignment(predicted, attacker.malicious_count, num_clients, seed)
+            )
+        else:
+            raise ValueError("attacks.adversary_model must be 'predictive' or 'just_in_time'")
+
+    def make_model():
+        return build_model(model_name, dataset_name)
 
     smpc_config = config.get("smpc", {})
     use_smpc = bool(smpc_config.get("enabled", False))
-    modulus = int(smpc_config.get("field_modulus", DEFAULT_FIELD_MODULUS))
     min_clients = int(smpc_config.get("min_clients_per_round", 2))
-    encoder, party_config = None, {}
-    robust_config = config.get("defences", {}).get("robust_aggregation", {})
+    encoder, party_config, party_hosts, mpc_port = None, [], [], None
+    mpc_input_count = 0
+    defences = config.get("defences", {}) or {}
+    robust_config = defences.get("robust_aggregation", {})
     robust_enabled = bool(robust_config.get("enabled", False))
+    secure_defence = _defence_config(smpc_config.get("defence"), "smpc.defence")
+    reference_defence = _defence_config(
+        defences.get("norm_defence_reference"), "defences.norm_defence_reference"
+    )
     if use_smpc and robust_enabled:
         raise ValueError(
             "Individual-update robust screening is not available with the current "
             "sum-only SMPC backend. Do not enable it until robust scoring and "
             "selection are implemented inside MPC."
         )
+    if secure_defence is not None and not use_smpc:
+        raise ValueError("smpc.defence requires smpc.enabled=true")
+    if reference_defence is not None and (use_smpc or robust_enabled):
+        raise ValueError("defences.norm_defence_reference is a plaintext-only comparison")
     if robust_enabled and num_clients < int(robust_config.get("min_survivors", 2)):
         raise ValueError("robust aggregation requires at least min_survivors clients")
+    norm_defence = secure_defence or reference_defence
 
     if use_smpc:
-        from fl_security.smpc.fixed_point import FixedPointEncoder
-        encoder = FixedPointEncoder(int(smpc_config.get("fixed_point_scale", 1_000_000)))
-        party_config = _load_party_configuration()
-        required = set(range(int(smpc_config["num_aggregation_parties"])))
-        if set(map(int, party_config)) != required:
+        if smpc_config.get("backend") != SPDZ2K_BACKEND:
             raise RuntimeError(
-                "SMPC is enabled but FL_SMPC_AGGREGATORS_JSON does not configure every party. "
-                "Use --local-aggregators or configure external aggregation services."
+                f"SMPC is enabled but backend must be exactly {SPDZ2K_BACKEND!r}; "
+                "there is no additive-sharing or plaintext fallback"
             )
-
-    global_model = CIFAR10CNN()
+        party_count = int(smpc_config["num_aggregation_parties"])
+        if party_count < 2:
+            raise ValueError("SPDZ2k requires at least two aggregation parties")
+        encoder = FixedPointEncoder(int(smpc_config.get("fixed_point_scale", 1_000_000)))
+        party_config = load_party_configuration(party_count)
+        party_hosts = [party.client_host for party in party_config]
+        mpc_port = client_port_base()
+        if mpc_port + party_count - 1 > 65535:
+            raise ValueError("SPDZ2k client port range exceeds TCP port limits")
+        if not os.environ.get("FL_MPSPDZ_HOME"):
+            raise RuntimeError("FL_MPSPDZ_HOME must be provisioned for SPDZ2k")
+        if not os.environ.get("FL_MPSPDZ_CLIENT_CREDENTIALS_DIR"):
+            raise RuntimeError(
+                "FL_MPSPDZ_CLIENT_CREDENTIALS_DIR must be provisioned for SPDZ2k"
+            )
+    global_model = make_model()
     initial_state = global_model.state_dict()
+    parameter_count = count_parameters(global_model)
+    if use_smpc:
+        mpc_input_count = sum(
+            tensor.numel()
+            for tensor in initial_state.values()
+            if torch.is_floating_point(tensor)
+        ) + 1
     state_keys = list(initial_state)
     initial_arrays = [tensor.detach().cpu().numpy() for tensor in initial_state.values()]
     initial_parameters = ndarrays_to_parameters(initial_arrays)
-    logger = ExperimentLogger(output_dir=config.get("evaluation", {}).get("output_dir", "./results"))
+    evaluation_config = config.get("evaluation", {})
+    logger = ExperimentLogger(output_dir=evaluation_config.get("output_dir", "./results"))
     slug = re.sub(r"[^a-zA-Z0-9_-]", "-", str(experiment.get("name", "fl")))
     experiment_prefix = f"{slug}-{seed}"
+    instrumentation_dir = None
+    if evaluation_config.get("instrumentation", False):
+        # Evaluation-only side channel: clients record their submitted update for
+        # offline influence analysis. It is not visible to the coordinator protocol.
+        instrumentation_dir = (Path(logger.output_dir) / f"{slug}_instrumentation").resolve()
+        instrumentation_dir.mkdir(parents=True, exist_ok=True)
+        np.save(
+            instrumentation_dir / "r0000_global.npy",
+            torch.cat([
+                t.detach().cpu().to(torch.float64).reshape(-1)
+                for t in initial_state.values() if torch.is_floating_point(t)
+            ]).numpy(),
+        )
+    asr_trigger = attacker.trigger
+    if asr_trigger is None and evaluation_config.get("measure_backdoor_asr", False):
+        from fl_security.attacks.backdoor import BackdoorTrigger
+
+        backdoor_cfg = dict(attack_config.get("backdoor", {}) or {})
+        asr_trigger = BackdoorTrigger(
+            dataset=dataset_name,
+            target_label=int(backdoor_cfg.get("target_label", 0)),
+            size=int(backdoor_cfg.get("trigger_size", 4)),
+        )
 
     class ResearchNumPyClient(NumPyClient):
         """Client whose experiment identity is supplied by the server."""
@@ -178,7 +296,7 @@ def run_flower_simulation(config: dict) -> None:
                 key: torch.from_numpy(array.copy())
                 for key, array in zip(state_keys, parameters)
             }
-            model = CIFAR10CNN()
+            model = make_model()
             model.load_state_dict(state)
             torch.manual_seed(seed + round_num * 100_000 + client_id)
 
@@ -188,14 +306,24 @@ def run_flower_simulation(config: dict) -> None:
                 shuffle=True,
             )
 
+            poisoning = attacker.data_poisoning(client_id, round_num)
             label_transform = None
-            if attacker.is_malicious(client_id, round_num) and attacker.attack_type == "label_flip":
+            batch_transform = None
+            if poisoning == "label_flip":
                 def label_transform(labels):
                     values = attacker.perturb_labels(
                         client_id, round_num, labels, num_classes=10
                     )
                     return torch.as_tensor(
                         values, dtype=torch.long, device=labels.device
+                    )
+            elif poisoning == "backdoor":
+                generator = torch.Generator()
+                generator.manual_seed(seed + round_num * 1_000 + client_id)
+
+                def batch_transform(images, labels):
+                    return attacker.poison_batch(
+                        client_id, round_num, images, labels, generator
                     )
 
             local_state = train_local(
@@ -205,6 +333,7 @@ def run_flower_simulation(config: dict) -> None:
                 lr=float(fl_config.get("learning_rate", 0.01)),
                 device=device,
                 label_transform=label_transform,
+                batch_transform=batch_transform,
             )
 
             bad_training = [
@@ -217,8 +346,10 @@ def run_flower_simulation(config: dict) -> None:
                 raise RuntimeError(
                     f"Client {client_id}: non-finite values produced "
                     f"during local training in tensors: {bad_training}")
+            estimate = fit_config.get("defence_threshold_estimate")
             local_state = attacker.perturb_update(
-                client_id, round_num, state, local_state
+                client_id, round_num, state, local_state,
+                threshold_estimate=None if estimate is None else float(estimate),
             )
 
             bad_attack = [
@@ -233,27 +364,55 @@ def run_flower_simulation(config: dict) -> None:
                     f"after applying {attacker.attack_type}: {bad_attack}"
                 )
 
-            if bool(fit_config.get("smpc_enabled", False)):
-                committee = json.loads(fit_config["committee_ids_json"])
-                endpoints = json.loads(fit_config["aggregator_endpoints_json"])
-                tokens = _load_client_tokens(client_id)
-
-                payload_bytes = upload_client_update(
-                    local_state,
-                    num_examples=len(dataset),
-                    client_id=client_id,
-                    round_id=str(fit_config["round_id"]),
-                    committee_ids=committee,
-                    aggregator_endpoints=endpoints,
-                    client_tokens=tokens,
-                    encoder=encoder,
-                    modulus=int(fit_config["field_modulus"]),
+            if instrumentation_dir is not None:
+                delta = flatten_delta(local_state, state).numpy()
+                np.savez(
+                    instrumentation_dir / f"r{round_num:04d}_c{client_id:04d}.npz",
+                    delta=delta,
+                    malicious=np.array(attacker.is_malicious(client_id, round_num)),
+                    num_examples=np.array(len(dataset)),
                 )
+
+            if bool(fit_config.get("smpc_enabled", False)):
+                if encoder is None or mpc_port is None:
+                    raise RuntimeError("SPDZ2k client runtime was not initialized")
+                credentials_dir = os.environ.get("FL_MPSPDZ_CLIENT_CREDENTIALS_DIR")
+                if not credentials_dir:
+                    raise RuntimeError(
+                        "FL_MPSPDZ_CLIENT_CREDENTIALS_DIR must be provisioned in the client runtime"
+                    )
+                submit_started = time.perf_counter()
+                if fit_config.get("mp_spdz_program") == ROBUST_PROGRAM:
+                    submitted_bytes = submit_client_delta(
+                        local_state,
+                        state,
+                        num_examples=len(dataset),
+                        client_id=client_id,
+                        hosts=json.loads(fit_config["mp_spdz_client_hosts_json"]),
+                        port_base=int(fit_config["mp_spdz_client_port_base"]),
+                        credentials_dir=credentials_dir,
+                        mp_spdz_home=os.environ["FL_MPSPDZ_HOME"],
+                        fractional_bits=int(fit_config["robust_fractional_bits"]),
+                        chunk_size=int(fit_config["robust_chunk_size"]),
+                    )
+                else:
+                    submitted_bytes = submit_client_update(
+                        local_state,
+                        num_examples=len(dataset),
+                        client_id=client_id,
+                        hosts=json.loads(fit_config["mp_spdz_client_hosts_json"]),
+                        port_base=int(fit_config["mp_spdz_client_port_base"]),
+                        credentials_dir=credentials_dir,
+                        mp_spdz_home=os.environ["FL_MPSPDZ_HOME"],
+                        encoder=encoder,
+                        max_clients=num_clients,
+                    )
 
                 return [], len(dataset), {
                     "client_id": client_id,
-                    "shares_uploaded": 1,
-                    "share_payload_bytes": int(payload_bytes),
+                    "mp_spdz_input_submitted": 1,
+                    "mp_spdz_submit_seconds": float(time.perf_counter() - submit_started),
+                    "mp_spdz_client_bytes": int(submitted_bytes or 0),
                 }
 
             return (
@@ -269,14 +428,23 @@ def run_flower_simulation(config: dict) -> None:
             return 0.0, 0, {"flower_client_id": self.flower_cid}
 
     class ResearchStrategy(Strategy):
-        """Flower strategy using MTD and committee-routed secret sharing."""
+        """Flower strategy using MTD and active SPDZ2k aggregation."""
         def __init__(self):
             self.last_round_config = {}
             self.proxy_id_by_client = None
             self.last_selected, self.last_completed, self.last_malicious = [], [], []
-            self.last_aggregation_seconds, self.last_share_bytes = 0.0, 0
-            self.last_cleanup_failures, self.last_round_id = 0, ""
+            self.last_aggregation_seconds, self.last_mpc_input_bytes = 0.0, 0
+            self.last_round_id = ""
             self.last_robust_report = {}
+            self.last_defence = {}
+            self.last_timing = {}
+            self.last_party_statistics = []
+            self.round_started = 0.0
+            self.threshold_estimate = (
+                norm_defence.static_norm
+                if norm_defence is not None and norm_defence.threshold == "static"
+                else (norm_defence.max_norm if norm_defence is not None else None)
+            )
             self.robust_detector = (
                 RobustUpdateDetector(
                     max_malicious=int(robust_config.get("max_malicious", 1)),
@@ -292,32 +460,16 @@ def run_flower_simulation(config: dict) -> None:
                 )
                 if robust_enabled else None
             )
-
-        def _round_parties(self):
-            if not use_smpc:
-                return []
-            committees = self.last_round_config.get("committees", {})
-            return sorted({
-                int(pid) for cid in self.last_selected for pid in committees.get(cid, [])
-            })
-
-        def _clear_round_parties(self):
-            self.last_cleanup_failures = 0
-            for party_id in self._round_parties():
-                try:
-                    acknowledge_party(
-                        party_config[str(party_id)]["url"],
-                        self.last_round_id,
-                        party_config[str(party_id)]["control_token"],
-                    )
-                except Exception as exc:
-                    self.last_cleanup_failures += 1
-                    print(f"Warning: failed to clear aggregator {party_id} round state: {exc}")
+            self.secure_weights: dict[int, int] = {}
 
         def initialize_parameters(self, client_manager):
             return initial_parameters
 
         def configure_fit(self, server_round, parameters, client_manager):
+            self.round_started = time.perf_counter()
+            self.last_timing = {}
+            self.last_party_statistics = []
+            self.last_defence = {}
             available = client_manager.all()
 
             # Flower generates opaque proxy IDs. Assign stable logical IDs
@@ -342,7 +494,7 @@ def run_flower_simulation(config: dict) -> None:
             self.last_round_config = mtd.generate_round_config(
                 server_round,
                 num_clients,
-                float(fl_config.get("fraction_train", 1.0)),
+                fraction,
             )
             self.last_selected = list(
                 self.last_round_config["selected_clients"]
@@ -356,15 +508,24 @@ def run_flower_simulation(config: dict) -> None:
                 flush=True,
             )
 
+            missing_clients = [
+                cid
+                for cid in self.last_selected
+                if self.proxy_id_by_client.get(int(cid)) not in available
+            ]
+            if use_smpc and missing_clients:
+                raise RuntimeError(
+                    "SPDZ2k round aborted before startup because selected clients "
+                    f"are unavailable: {missing_clients}"
+                )
+
             instructions = []
             for cid in self.last_selected:
                 proxy_id = self.proxy_id_by_client.get(int(cid))
                 proxy = available.get(proxy_id) if proxy_id is not None else None
                 if proxy is None:
-                    print(
-                        f"[WARNING] Logical client {cid} is not currently available",
-                        flush=True,
-                    )
+                    if use_smpc:
+                        raise RuntimeError(f"selected SPDZ2k client {cid} is unavailable")
                     continue
 
                 client_config = {
@@ -372,52 +533,150 @@ def run_flower_simulation(config: dict) -> None:
                     "client_id": int(cid),
                     "smpc_enabled": bool(use_smpc),
                 }
+                if self.threshold_estimate is not None and attacker.attack_type == "adaptive_backdoor":
+                    # Thresholds are public (static) or revealed every round
+                    # (adaptive); the adaptive attacker is assumed to know them.
+                    client_config["defence_threshold_estimate"] = float(self.threshold_estimate)
 
                 if use_smpc:
-                    committee = self.last_round_config["committees"][cid]
                     client_config.update({
-                        "round_id": self.last_round_id,
-                        "committee_ids_json": json.dumps(
-                            committee, separators=(",", ":")
+                        "mp_spdz_client_hosts_json": json.dumps(
+                            party_hosts, separators=(",", ":")
                         ),
-                        "aggregator_endpoints_json": json.dumps({
-                            str(pid): party_config[str(pid)]["url"]
-                            for pid in committee
-                        }, separators=(",", ":")),
-                        "field_modulus": int(modulus),
+                        "mp_spdz_client_port_base": int(mpc_port),
                     })
+                    if secure_defence is not None:
+                        client_config.update({
+                            "mp_spdz_program": ROBUST_PROGRAM,
+                            "robust_fractional_bits": int(secure_defence.fractional_bits),
+                            "robust_chunk_size": int(secure_defence.chunk_size),
+                        })
 
                 instructions.append((proxy, FitIns(parameters, client_config)))
 
+            if use_smpc:
+                if len(self.last_selected) < min_clients:
+                    raise RuntimeError(
+                        f"SPDZ2k requires at least {min_clients} selected clients"
+                    )
+                counts = [len(client_datasets[int(cid)]) for cid in self.last_selected]
+                started = time.perf_counter()
+                if secure_defence is not None:
+                    weights = secure_defence.quantized_weights(counts)
+                    self.secure_weights = {
+                        int(cid): int(weight) for cid, weight in zip(self.last_selected, weights)
+                    }
+                    start_round(
+                        party_config,
+                        self.last_round_id,
+                        self.last_selected,
+                        mpc_input_count,
+                        counts,
+                        num_clients,
+                        mpc_port,
+                        program=ROBUST_PROGRAM,
+                        weights=weights,
+                        robust_spec=secure_defence.round_spec(weights),
+                        chunk_size=secure_defence.chunk_size,
+                    )
+                else:
+                    start_round(
+                        party_config,
+                        self.last_round_id,
+                        self.last_selected,
+                        mpc_input_count,
+                        counts,
+                        num_clients,
+                        mpc_port,
+                    )
+                self.last_timing["mpc_start_seconds"] = time.perf_counter() - started
+
             return instructions
 
-        def aggregate_fit(self, server_round, results, failures):
-            if not results:
-                self.last_completed = []
-                self._clear_round_parties()
-                return None, {}
-            committees = self.last_round_config["committees"]
-            client_ids = _resolve_authenticated_client_ids(
-                results, self.proxy_id_by_client, self.last_selected
-            )
-            reported_counts = [int(fit_res.num_examples) for _, fit_res in results]
-            counts = [len(client_datasets[cid]) for cid in client_ids]
-            count_mismatches = [
-                (cid, reported, expected)
-                for cid, reported, expected in zip(client_ids, reported_counts, counts)
-                if reported != expected
+        def _apply_norm_defence(self, config_obj, client_ids, client_states, counts):
+            """Plaintext execution of the norm-defence algorithm (reference only)."""
+            order = sorted(range(len(client_ids)), key=lambda i: client_ids[i])
+            sorted_ids = [client_ids[i] for i in order]
+            weights = config_obj.quantized_weights([counts[i] for i in order])
+            spec = config_obj.round_spec(weights)
+            base = global_model.state_dict()
+            inputs = [
+                encode_delta(client_states[i], base, config_obj.fractional_bits) for i in order
             ]
-            self.last_completed = client_ids
-            self.last_malicious = [
-                cid for cid in client_ids if attacker.is_malicious(cid, server_round)
-            ]
-            self.last_share_bytes = sum(
-                int(fit_res.metrics.get("share_payload_bytes", 0)) for _, fit_res in results
-            )
-            started = time.perf_counter()
+            result = robust_reference(inputs, weights, spec)
+            return sorted_ids, weights, decode_robust_output(result, weights, config_obj)
 
-            if use_smpc:
-                try:
+        def _record_norm_defence(self, sorted_ids, weights, decoded, config_obj):
+            result = decoded.result
+            malicious = set(self.last_malicious)
+            accepted = {cid: int(a) for cid, a in zip(sorted_ids, result.accepted)}
+            clipped = {cid: int(c) for cid, c in zip(sorted_ids, result.clip_flags)}
+            rejected = {cid: 1 - a for cid, a in accepted.items()}
+            flagged = {cid: max(rejected[cid], clipped[cid]) for cid in sorted_ids}
+            detection = _detection_counts(flagged, malicious)
+            rejection = _detection_counts(rejected, malicious)
+            self.threshold_estimate = decoded.threshold_norm
+            self.last_defence = {
+                "defence_mode": config_obj.mode,
+                "defence_threshold_rule": config_obj.threshold,
+                "defence_threshold_norm": float(decoded.threshold_norm),
+                "defence_accepted_client_ids": json.dumps(
+                    [cid for cid in sorted_ids if accepted[cid]]),
+                "defence_rejected_client_ids": json.dumps(
+                    [cid for cid in sorted_ids if not accepted[cid]]),
+                "defence_clipped_client_ids": json.dumps(
+                    [cid for cid in sorted_ids if clipped[cid]]),
+                "defence_clipped_count": int(result.clipped_count),
+                "defence_accepted_weight": int(decoded.accepted_weight),
+                "defence_aggregate_norm": float(decoded.aggregate_norm),
+                "defence_output_check_passed": int(decoded.output_check_passed),
+                "defence_update_applied": int(
+                    decoded.output_check_passed and decoded.accepted_weight > 0),
+                "flagged_true_positives": detection["tp"],
+                "flagged_false_positives": detection["fp"],
+                "flagged_false_negatives": detection["fn"],
+                "honest_participants": detection["honest"],
+                "rejected_true_positives": rejection["tp"],
+                "rejected_false_positives": rejection["fp"],
+                "weights_json": json.dumps(dict(zip(sorted_ids, weights))),
+            }
+
+        def aggregate_fit(self, server_round, results, failures):
+            started = time.perf_counter()
+            try:
+                if not results:
+                    self.last_completed = []
+                    if use_smpc:
+                        raise RuntimeError("SPDZ2k round aborted: no clients completed")
+                    return None, {}
+
+                client_ids = _resolve_authenticated_client_ids(
+                    results, self.proxy_id_by_client, self.last_selected
+                )
+                reported_counts = [int(fit_res.num_examples) for _, fit_res in results]
+                counts = [len(client_datasets[cid]) for cid in client_ids]
+                count_mismatches = [
+                    (cid, reported, expected)
+                    for cid, reported, expected in zip(client_ids, reported_counts, counts)
+                    if reported != expected
+                ]
+                self.last_completed = client_ids
+                self.last_malicious = [
+                    cid for cid in client_ids if attacker.is_malicious(cid, server_round)
+                ]
+                self.last_mpc_input_bytes = 0
+
+                if use_smpc:
+                    if encoder is None or mpc_port is None:
+                        raise RuntimeError("SPDZ2k server runtime was not initialized")
+                    if failures:
+                        raise RuntimeError(
+                            "SPDZ2k round aborted because one or more Flower clients failed"
+                        )
+                    if set(client_ids) != set(self.last_selected):
+                        raise RuntimeError(
+                            "SPDZ2k round aborted because a selected client did not complete"
+                        )
                     if count_mismatches:
                         raise RuntimeError(
                             "Client-reported example counts do not match server-side partitions: "
@@ -425,107 +684,151 @@ def run_flower_simulation(config: dict) -> None:
                         )
                     if len(client_ids) < min_clients:
                         raise RuntimeError(
-                            f"Only {len(client_ids)} clients completed; SMPC requires {min_clients}. "
-                            "Aborting this round to avoid a low-cardinality aggregate."
+                            f"Only {len(client_ids)} clients completed; SPDZ2k requires "
+                            f"{min_clients} for this experiment."
                         )
+                    chunk = (
+                        secure_defence.chunk_size if secure_defence is not None
+                        else SPDZ2K_IO_CHUNK_SIZE
+                    )
+                    padded_input_count = (mpc_input_count + chunk - 1) // chunk * chunk
+                    self.last_mpc_input_bytes = (
+                        padded_input_count * 8 * len(client_ids) * len(party_config)
+                    )
+                    submit_seconds = []
                     for _, fit_res in results:
-                        if fit_res.metrics.get("shares_uploaded") != 1:
-                            raise RuntimeError("Flower client did not confirm share uploads")
+                        metrics = getattr(fit_res, "metrics", {})
+                        if not isinstance(metrics, Mapping):
+                            raise RuntimeError("Flower returned invalid client metrics")
+                        if metrics.get("mp_spdz_input_submitted") != 1:
+                            raise RuntimeError(
+                                "Flower client did not confirm its SPDZ2k input submission"
+                            )
                         if parameters_to_ndarrays(fit_res.parameters):
-                            raise RuntimeError("SMPC mode received plaintext parameters; refusing fallback")
+                            raise RuntimeError(
+                                "SPDZ2k mode received plaintext parameters; refusing fallback"
+                            )
+                        submit_seconds.append(float(metrics.get("mp_spdz_submit_seconds", 0.0)))
+                    self.last_timing["mpc_client_submit_seconds_max"] = (
+                        max(submit_seconds) if submit_seconds else 0.0
+                    )
 
-                    parties_used = list(range(int(smpc_config["num_aggregation_parties"])))
-                    participants_by_party = {
-                        party_id: [cid for cid in client_ids if party_id in committees[cid]]
-                        for party_id in parties_used
-                    }
-                    weak_parties = [
-                        party_id for party_id, members in participants_by_party.items()
-                        if len(members) < 2
-                    ]
-                    if weak_parties:
+                    check_round_running(party_config, self.last_round_id)
+                    credentials_dir = os.environ.get(
+                        "FL_MPSPDZ_CLIENT_CREDENTIALS_DIR"
+                    )
+                    if not credentials_dir:
                         raise RuntimeError(
-                            "SMPC round aborted: parties received fewer than two client shares: "
-                            f"{weak_parties}. Retry with more successful clients."
+                            "FL_MPSPDZ_CLIENT_CREDENTIALS_DIR must be provisioned "
+                            "for the aggregate-output client"
                         )
-
-                    # Stage 1: parties sum their client shares and re-share their
-                    # partial sums directly to all parties. No first-stage partial
-                    # sum is ever returned to the coordinator.
-                    for party_id in parties_used:
-                        finalize_party(
-                            party_config[str(party_id)]["url"],
-                            self.last_round_id,
-                            participants_by_party[party_id],
-                            party_config[str(party_id)]["control_token"],
+                    receive_started = time.perf_counter()
+                    if secure_defence is not None:
+                        result = receive_robust_result(
+                            hosts=party_hosts,
+                            port_base=mpc_port,
+                            credentials_dir=credentials_dir,
+                            mp_spdz_home=os.environ["FL_MPSPDZ_HOME"],
+                            output_client_id=num_clients,
+                            client_count=len(client_ids),
+                            dimension=mpc_input_count - 1,
                         )
-
-                    # Stage 2: the coordinator sees only independent random shares
-                    # of the global sum, not the committee-partial equations.
-                    party_partials = [
-                        retrieve_party_share(
-                            party_config[str(party_id)]["url"],
-                            self.last_round_id,
-                            parties_used,
-                            party_config[str(party_id)]["control_token"],
+                    else:
+                        aggregated = receive_weighted_average(
+                            global_model.state_dict(),
+                            hosts=party_hosts,
+                            port_base=mpc_port,
+                            credentials_dir=credentials_dir,
+                            mp_spdz_home=os.environ["FL_MPSPDZ_HOME"],
+                            output_client_id=num_clients,
+                            encoder=encoder,
+                            expected_total_examples=sum(counts),
                         )
-                        for party_id in parties_used
-                    ]
-                    aggregated = reconstruct_weighted_average(
-                        party_partials, global_model.state_dict(), sum(counts), encoder, modulus
-                    )
-                    global_model.load_state_dict(aggregated)
-                finally:
-                    # Also removes partial uploads from failed clients and cached party sums.
-                    self._clear_round_parties()
-            else:
-                if count_mismatches:
-                    raise RuntimeError(
-                        "Client-reported example counts do not match server-side partitions: "
-                        f"{count_mismatches}"
-                    )
-                client_states = []
-                for _, fit_res in results:
-                    arrays = parameters_to_ndarrays(fit_res.parameters)
-                    client_states.append({
-                        key: torch.from_numpy(array.copy())
-                        for key, array in zip(state_keys, arrays)
-                    })
-                if robust_enabled:
-                    aggregated, self.last_robust_report = self.robust_detector.aggregate(
-                        client_states,
-                        counts,
-                        global_model.state_dict(),
-                        client_ids=client_ids,
-                    )
+                    self.last_timing["mpc_receive_seconds"] = time.perf_counter() - receive_started
+                    finish_started = time.perf_counter()
+                    statistics = finish_round(party_config, self.last_round_id)
+                    self.last_timing["mpc_finish_seconds"] = time.perf_counter() - finish_started
+                    self.last_party_statistics = statistics if isinstance(statistics, list) else []
+                    if secure_defence is not None:
+                        sorted_ids = sorted(client_ids)
+                        weights = [self.secure_weights[cid] for cid in sorted_ids]
+                        decoded = decode_robust_output(result, weights, secure_defence)
+                        self._record_norm_defence(sorted_ids, weights, decoded, secure_defence)
+                        if decoded.output_check_passed and decoded.accepted_weight > 0:
+                            global_model.load_state_dict(
+                                apply_delta(global_model.state_dict(), decoded.delta)
+                            )
+                    else:
+                        global_model.load_state_dict(aggregated)
                 else:
-                    self.last_robust_report = {}
-                    aggregated = weighted_fedavg(
-                        client_states, counts, global_model.state_dict()
-                    )
-                global_model.load_state_dict(aggregated)
+                    if count_mismatches:
+                        raise RuntimeError(
+                            "Client-reported example counts do not match server-side partitions: "
+                            f"{count_mismatches}"
+                        )
+                    client_states = []
+                    for _, fit_res in results:
+                        arrays = parameters_to_ndarrays(fit_res.parameters)
+                        client_states.append({
+                            key: torch.from_numpy(array.copy())
+                            for key, array in zip(state_keys, arrays)
+                        })
+                    if robust_enabled:
+                        aggregated, self.last_robust_report = self.robust_detector.aggregate(
+                            client_states,
+                            counts,
+                            global_model.state_dict(),
+                            client_ids=client_ids,
+                        )
+                        global_model.load_state_dict(aggregated)
+                    elif reference_defence is not None:
+                        self.last_robust_report = {}
+                        sorted_ids, weights, decoded = self._apply_norm_defence(
+                            reference_defence, client_ids, client_states, counts
+                        )
+                        self._record_norm_defence(sorted_ids, weights, decoded, reference_defence)
+                        if decoded.output_check_passed and decoded.accepted_weight > 0:
+                            global_model.load_state_dict(
+                                apply_delta(global_model.state_dict(), decoded.delta)
+                            )
+                    else:
+                        self.last_robust_report = {}
+                        aggregated = weighted_fedavg(
+                            client_states, counts, global_model.state_dict()
+                        )
+                        global_model.load_state_dict(aggregated)
 
-            self.last_aggregation_seconds = time.perf_counter() - started
-            return (
-                ndarrays_to_parameters([
-                    tensor.detach().cpu().numpy() for tensor in global_model.state_dict().values()
-                ]),
-                {
-                    "selected_clients": int(len(client_ids)),
-                    "malicious_clients": int(len(self.last_malicious)),
-                    "smpc_enabled": int(use_smpc),
-                    "share_payload_bytes": int(self.last_share_bytes),
-                    "aggregation_seconds": float(self.last_aggregation_seconds),
-                    "aggregators_used": (
-                        int(len({
-                            int(pid) for cid in client_ids
-                            for pid in committees[cid]
-                        }))
-                        if use_smpc else 0
-                    ),
-                    "aggregator_cleanup_failures": int(self.last_cleanup_failures),
-                },
-            )
+                self.last_aggregation_seconds = time.perf_counter() - started
+                if instrumentation_dir is not None:
+                    np.save(
+                        instrumentation_dir / f"r{server_round:04d}_global.npy",
+                        torch.cat([
+                            t.detach().cpu().to(torch.float64).reshape(-1)
+                            for t in global_model.state_dict().values()
+                            if torch.is_floating_point(t)
+                        ]).numpy(),
+                    )
+                return (
+                    ndarrays_to_parameters([
+                        tensor.detach().cpu().numpy()
+                        for tensor in global_model.state_dict().values()
+                    ]),
+                    {
+                        "selected_clients": int(len(client_ids)),
+                        "malicious_clients": int(len(self.last_malicious)),
+                        "smpc_enabled": int(use_smpc),
+                        "mp_spdz_input_bytes": int(self.last_mpc_input_bytes),
+                        "aggregation_seconds": float(self.last_aggregation_seconds),
+                        "mp_spdz_parties_used": len(party_config) if use_smpc else 0,
+                    },
+                )
+            except Exception as error:
+                if use_smpc:
+                    try:
+                        abort_round(party_config, self.last_round_id)
+                    except Exception as abort_error:
+                        error.add_note(f"SPDZ2k abort cleanup also failed: {abort_error}")
+                raise
 
         def configure_evaluate(self, server_round, parameters, client_manager):
             return []
@@ -535,34 +838,49 @@ def run_flower_simulation(config: dict) -> None:
 
         def evaluate(self, server_round, parameters):
             arrays = parameters_to_ndarrays(parameters)
-            model = CIFAR10CNN()
+            model = make_model()
             model.load_state_dict({
                 key: torch.from_numpy(array.copy()) for key, array in zip(state_keys, arrays)
             })
             loss, accuracy = evaluate_model(model, testloader, device=device)
-            logger.log_round({
+            asr = None
+            if asr_trigger is not None:
+                from fl_security.attacks.backdoor import attack_success_rate
+
+                asr = attack_success_rate(model, testloader, asr_trigger, device=device)
+            stats = self.last_party_statistics
+            protocol_seconds = [s.get("protocol_seconds") for s in stats if s.get("protocol_seconds") is not None]
+            global_mb = [s.get("global_data_sent_mb") for s in stats if s.get("global_data_sent_mb") is not None]
+            record = {
                 "round": int(server_round),
                 "global_loss": float(loss),
                 "global_accuracy": float(accuracy),
+                "backdoor_asr": None if asr is None else float(asr),
                 "selected_clients": int(len(self.last_selected)),
                 "completed_clients": int(len(self.last_completed)),
                 "malicious_selected": int(len(self.last_malicious)),
+                "selected_client_ids": json.dumps([int(c) for c in self.last_selected]),
+                "malicious_client_ids": json.dumps([int(c) for c in self.last_malicious]),
                 "smpc_enabled": int(use_smpc),
-                "committees_used": (
-                    int(len(self.last_round_config.get("committees", {})))
-                    if use_smpc else 0
+                "smpc_program": (
+                    (ROBUST_PROGRAM if secure_defence is not None else "weighted_sum")
+                    if use_smpc else "none"
                 ),
+                "mtd_enabled": int(bool(mtd.enabled)),
+                "mtd_schedule": mtd.schedule or ("dynamic" if mtd.enabled else "static"),
                 "mtd_secret_seeded": int(self.last_round_config.get("secret_seeded", False)),
-                "aggregators_used": (
-                    int(len({
-                        int(pid) for cid in self.last_completed
-                        for pid in self.last_round_config.get("committees", {}).get(cid, [])
-                    }))
-                    if use_smpc else 0
-                ),
-                "share_payload_bytes": int(self.last_share_bytes),
+                "model_parameters": int(parameter_count),
+                "mp_spdz_parties_used": len(party_config) if use_smpc else 0,
+                "mp_spdz_input_bytes": int(self.last_mpc_input_bytes),
                 "aggregation_seconds": float(self.last_aggregation_seconds),
-                "aggregator_cleanup_failures": int(self.last_cleanup_failures),
+                "round_seconds": float(time.perf_counter() - self.round_started)
+                if self.round_started else 0.0,
+                "mpc_start_seconds": self.last_timing.get("mpc_start_seconds"),
+                "mpc_client_submit_seconds_max": self.last_timing.get("mpc_client_submit_seconds_max"),
+                "mpc_receive_seconds": self.last_timing.get("mpc_receive_seconds"),
+                "mpc_finish_seconds": self.last_timing.get("mpc_finish_seconds"),
+                "mpc_protocol_seconds_max": max(protocol_seconds) if protocol_seconds else None,
+                "mpc_global_data_sent_mb": global_mb[0] if global_mb else None,
                 "client_failures_or_omissions": int(
                     max(0, len(self.last_selected) - len(self.last_completed))
                 ),
@@ -614,7 +932,9 @@ def run_flower_simulation(config: dict) -> None:
                     self.last_robust_report.get("client_scores", []),
                     separators=(",", ":"),
                 ),
-            })
+            }
+            record.update(self.last_defence)
+            logger.log_round(record)
             return float(loss), {"accuracy": float(accuracy)}
 
         def summary(self):
@@ -623,21 +943,24 @@ def run_flower_simulation(config: dict) -> None:
     def client_fn(cid: str):
         return ResearchNumPyClient(cid).to_client()
 
-    # These are coordinator-only secrets. The strategy has already loaded
-    # the values it needs, so remove them before Ray starts worker processes.
-    # Client auth credentials are handled separately (and locally remain
-    # shared by the synthetic simulation runtime; see the README warning).
+    # Party control secrets stay on the coordinator. Client TLS credentials are
+    # provisioned to each real client runtime; local simulation shares its
+    # credential directory and is not an OS-level isolation boundary.
     server_only_names = (
+        "FL_MPSPDZ_PARTIES_JSON",
+        "FL_MPSPDZ_CONTROL_TOKEN",
         "FL_SMPC_AGGREGATORS_JSON",
         "FL_MTD_SECRET",
         "FL_SMPC_CONTROL_TOKEN",
         "FL_SMPC_CLIENT_KEYS_JSON",
+        "FL_SMPC_CLIENT_TOKENS_JSON",
     )
     server_only_env = {
         name: os.environ.pop(name)
         for name in server_only_names
         if name in os.environ
     }
+    aborted: BaseException | None = None
     try:
         start_simulation(
             client_fn=client_fn,
@@ -650,11 +973,25 @@ def run_flower_simulation(config: dict) -> None:
             },
             ray_init_args={"include_dashboard": False, "ignore_reinit_error": True},
         )
+    except Exception as exc:  # fail-closed abort: keep the rounds that did complete
+        aborted = exc
     finally:
         os.environ.update(server_only_env)
     evaluation, name = config.get("evaluation", {}), experiment.get("name", "fl_security_experiment")
-    if evaluation.get("save_csv", True):
+    if evaluation.get("save_csv", True) and logger.records:
         logger.save_to_csv(f"{slug}_results.csv")
+    if aborted is not None:
+        completed = max((int(r.get("round", 0)) for r in logger.records), default=0)
+        cause = aborted.__cause__ or aborted
+        (Path(logger.output_dir) / f"{slug}_abort.json").write_text(json.dumps({
+            "error_type": type(aborted).__name__,
+            "error": str(aborted)[:2000],
+            "cause_type": type(cause).__name__,
+            "cause": str(cause)[-2000:],
+            "rounds_completed": completed,
+            "rounds_configured": rounds,
+        }, indent=2), encoding="utf-8")
+        raise aborted
     if evaluation.get("save_plots", True):
         logger.plot_metrics(f"{slug}_accuracy.png")
     print(f"Flower experiment '{name}' completed.")

@@ -7,7 +7,7 @@ class TestMTDExecution(unittest.TestCase):
         """Verify that selected clients vary between rounds when MTD is enabled (random strategy)."""
         config = {
             "experiment": {"seed": 42},
-            "mtd": {"enabled": True, "selection_strategy": "random", "committee_size": 3}
+            "mtd": {"enabled": True, "selection_strategy": "random"}
         }
         controller = MTDController(config)
         num_clients = 20
@@ -21,21 +21,20 @@ class TestMTDExecution(unittest.TestCase):
         
         print(f"\n[MTD Log] Round 1 selected clients: {clients_r1}")
         print(f"[MTD Log] Round 2 selected clients: {clients_r2}")
-        print(f"[MTD Log] Round 1 committees: {round_1_cfg['committees']}")
         
-        # Verify participation count matches fraction
+        # Check that the selected cohort matches the configured fraction.
         expected_count = int(num_clients * fraction)
         self.assertEqual(len(clients_r1), expected_count)
         self.assertEqual(len(clients_r2), expected_count)
         
-        # Verify actual selection variance between rounds
+        # Check that random selection varies across rounds.
         self.assertNotEqual(clients_r1, clients_r2)
 
     def test_fixed_baseline_stability(self):
         """Verify fixed baseline selection remains stable across rounds when MTD is disabled."""
         num_clients = 10
         fraction = 0.5
-        # Fixed selection (e.g. sorted first K clients)
+        # Fixed selection uses the first K client IDs.
         selected_r1 = select_clients(num_clients, fraction, strategy='fixed', seed=42)
         selected_r2 = select_clients(num_clients, fraction, strategy='fixed', seed=42)
         

@@ -1,0 +1,12 @@
+experiment: {name: calib_hybrid_fmnist, seed: 101, rounds: 2}
+federated_learning: {framework: flower, dataset: fashion_mnist, model: compact_cnn, num_clients: 12, fraction_train: 0.34, local_epochs: 1, batch_size: 32, learning_rate: 0.05, partitioning: iid}
+mtd: {schedule: secret}
+smpc:
+  enabled: true
+  backend: mp_spdz_spdz2k
+  fixed_point_scale: 1000000
+  num_aggregation_parties: 3
+  min_clients_per_round: 2
+  defence: {enabled: true, mode: clip_screen, threshold: adaptive, median_multiplier_squared: 1, screen_multiplier_squared: 4, min_norm: 0.25, max_norm: 16.0, static_norm: 4.0, max_valid_norm: 64.0, fractional_bits: 14, clip_bits: 8, reveal_client_flags: true}
+attacks: {enabled: true, attack_type: backdoor, num_malicious: 3, placement: stratified, boost: 4.0, backdoor: {target_label: 0, trigger_size: 4, poison_fraction: 0.5}}
+evaluation: {output_dir: research_output/completion/experiments/calibration/runs, save_csv: true, save_plots: false, instrumentation: true, measure_backdoor_asr: true}

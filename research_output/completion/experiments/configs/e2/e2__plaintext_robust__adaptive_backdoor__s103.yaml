@@ -1,0 +1,46 @@
+attacks:
+  adaptive_norm_fraction: 0.95
+  attack_type: adaptive_backdoor
+  backdoor:
+    poison_fraction: 0.5
+    target_label: 0
+    trigger_size: 4
+  boost: 4.0
+  enabled: true
+  num_malicious: 3
+  placement: stratified
+defences:
+  robust_aggregation:
+    enabled: true
+    history_cosine_threshold: -0.25
+    history_decay: 0.8
+    max_malicious: 1
+    max_norm_ratio: 2.0
+    min_cosine_similarity: 0.0
+    min_history_rounds: 2
+    min_survivors: 2
+    residual_z_threshold: 3.5
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e2/e2__plaintext_robust__adaptive_backdoor__s103
+  save_csv: true
+  save_plots: false
+experiment:
+  name: e2__plaintext_robust__adaptive_backdoor__s103
+  rounds: 10
+  seed: 103
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.34
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: static
+smpc:
+  enabled: false

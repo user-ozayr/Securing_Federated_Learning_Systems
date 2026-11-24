@@ -1,4 +1,4 @@
-"""Round-scoped MTD with balanced committees and secret-keyed randomness."""
+"""Round-scoped client selection with secret-keyed randomness."""
 import hashlib
 import hmac
 import os
@@ -7,17 +7,42 @@ from fl_security.mtd.client_selection import select_clients
 from fl_security.mtd.randomness import HMACCounterRNG
 
 
+SCHEDULES = ("static", "deterministic", "secret")
+
+
 class MTDController:
+    """Round-scoped participation scheduling.
+
+    ``mtd.schedule`` (optional) makes the participation regime explicit:
+
+    * ``static`` – the same cohort (first K clients) every round;
+    * ``deterministic`` – a fresh cohort every round derived from the public
+      experiment seed only (reproducible, therefore predictable);
+    * ``secret`` – a fresh cohort every round derived with HMAC-SHA256 from
+      ``FL_MTD_SECRET`` (required, at least 32 bytes) and the seed.
+
+    Without ``schedule`` the historical behaviour is kept: ``enabled`` selects a
+    dynamic schedule, which is secret-derived whenever FL_MTD_SECRET is set.
+    """
+
     def __init__(self, config: dict):
         self.config = config.get("mtd", {})
         self.enabled = bool(self.config.get("enabled", False))
+        self.schedule = self.config.get("schedule")
+        if self.schedule is not None:
+            if self.schedule not in SCHEDULES:
+                raise ValueError(f"mtd.schedule must be one of {SCHEDULES}")
+            self.enabled = self.schedule != "static"
         self.selection_strategy = self.config.get("selection_strategy", "random")
-        self.committee_size = int(self.config.get("committee_size", 3))
         configured_seed = int(config.get("experiment", {}).get("seed", 42))
 
         # The live schedule uses an HMAC-derived PRF key. Without this secret,
         # schedules are reproducible simulation artifacts and are not secret.
         secret = os.environ.get("FL_MTD_SECRET", "")
+        if self.schedule == "deterministic":
+            secret = ""
+        if self.schedule == "secret" and not secret:
+            raise ValueError("mtd.schedule 'secret' requires FL_MTD_SECRET to be set")
         material = f"fl-security-mtd-seed-v1:{configured_seed}".encode("utf-8")
         if secret:
             secret_bytes = secret.encode("utf-8")
@@ -42,12 +67,11 @@ class MTDController:
         smpc = config.get("smpc", {})
         self.smpc_enabled = bool(smpc.get("enabled", False))
         self.min_clients_per_round = int(smpc.get("min_clients_per_round", 2))
-        self.num_aggregation_parties = int(smpc.get(
-            "num_aggregation_parties",
-            max(self.committee_size, config.get("federated_learning", {}).get("num_clients", 1)),
-        ))
-        if self.committee_size < 2 or self.num_aggregation_parties < 2:
-            raise ValueError("secure aggregation committees and party count must be >= 2")
+        self.num_aggregation_parties = int(
+            smpc.get("num_aggregation_parties", 0)
+        )
+        if self.smpc_enabled and self.num_aggregation_parties < 2:
+            raise ValueError("SPDZ2k aggregation party count must be >= 2")
         if self.min_clients_per_round < 2:
             raise ValueError("smpc.min_clients_per_round must be >= 2")
 
@@ -66,42 +90,15 @@ class MTDController:
             num_clients, fraction, strategy=strategy, seed=round_seed, rng=rng
         )
 
-        committee_size = min(self.committee_size, self.num_aggregation_parties)
-        if self.smpc_enabled:
-            if len(selected) < self.min_clients_per_round:
-                raise ValueError(
-                    f"SMPC requires at least {self.min_clients_per_round} selected clients per round"
-                )
-            if len(selected) * committee_size < 2 * self.num_aggregation_parties:
-                raise ValueError(
-                    "committee assignment cannot give every used party shares from at least "
-                    "two clients; increase client fraction, reduce aggregator count, "
-                    "or reduce committee_size"
-                )
-
-        # Balanced cyclic assignment: no committee repeats a party, party loads
-        # differ by at most one, and every party gets >=2 shares when feasible.
-        party_order = list(range(self.num_aggregation_parties))
-        rng.shuffle(party_order)
-        offset = rng.randbelow(self.num_aggregation_parties)
-        cycle = party_order[offset:] + party_order[:offset]
-        slots = [
-            cycle[index % self.num_aggregation_parties]
-            for index in range(len(selected) * committee_size)
-        ]
-        committees = {
-            int(cid): sorted(
-                int(pid)
-                for pid in slots[index * committee_size:(index + 1) * committee_size]
+        if self.smpc_enabled and len(selected) < self.min_clients_per_round:
+            raise ValueError(
+                f"SPDZ2k requires at least {self.min_clients_per_round} selected clients per round"
             )
-            for index, cid in enumerate(selected)
-        }
+
         return {
             "round": round_num,
             "selected_clients": selected,
-            "committees": committees,
             "seed": round_seed,
             "secret_seeded": self.secret_seeded,
             "num_aggregation_parties": self.num_aggregation_parties,
-            "committee_size": committee_size,
         }

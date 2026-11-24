@@ -20,7 +20,7 @@ from fl_security.config import load_config
 from fl_security.evaluation.statistics import summarize_values
 from fl_security.evaluation.csv_safety import sanitize_csv_dataframe
 from fl_security.federated.flower_simulation import run_flower_simulation
-from fl_security.smpc.local_demo import run_with_local_aggregators
+from fl_security.smpc.local_demo import run_with_local_mp_spdz
 
 
 def _slug(value: str) -> str:
@@ -54,7 +54,7 @@ def run_benchmark(
     seeds: list[int],
     baseline_condition: str | None,
     output_dir: Path,
-    use_local_aggregators: bool,
+    use_local_mp_spdz: bool,
     skip_existing: bool,
 ) -> dict[str, Path]:
     if len(config_paths) < 2:
@@ -92,8 +92,8 @@ def run_benchmark(
 
             csv_path = condition_dir / f"{run_name}_results.csv"
             if not (skip_existing and csv_path.exists()):
-                if use_local_aggregators and run_config.get("smpc", {}).get("enabled", False):
-                    run_with_local_aggregators(run_config)
+                if use_local_mp_spdz and run_config.get("smpc", {}).get("enabled", False):
+                    run_with_local_mp_spdz(run_config)
                 else:
                     run_flower_simulation(run_config)
 
@@ -128,9 +128,11 @@ def run_benchmark(
                 "client_fraction": float(run_config["federated_learning"].get("fraction_train", 1.0)),
                 "local_epochs": int(run_config["federated_learning"].get("local_epochs", 1)),
                 "num_aggregation_parties": int(smpc_config.get("num_aggregation_parties", 0)),
-                "committee_size": int(mtd_config.get("committee_size", 0)),
+                "smpc_backend": smpc_config.get("backend", "plaintext_fedavg"),
+                "min_clients_per_round": int(smpc_config.get("min_clients_per_round", 0)),
+                "mtd_selection_strategy": mtd_config.get("selection_strategy", "random"),
+                "mtd_change_every_round": bool(mtd_config.get("change_every_round", False)),
                 "fixed_point_scale": int(smpc_config.get("fixed_point_scale", 0)),
-                "field_modulus": int(smpc_config.get("field_modulus", 0)),
             })
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -198,9 +200,9 @@ def main():
     parser.add_argument("--start-seed", type=int, default=None, help="First seed; defaults to baseline seed")
     parser.add_argument("--output-dir", default="./results/benchmark")
     parser.add_argument(
-        "--no-local-aggregators",
+        "--no-local-mp-spdz",
         action="store_true",
-        help="Use externally configured aggregation services instead of local processes",
+        help="Use externally configured SPDZ2k parties instead of local party services",
     )
     parser.add_argument("--skip-existing", action="store_true", help="Reuse run CSVs already on disk")
     args = parser.parse_args()
@@ -226,7 +228,7 @@ def main():
         seeds=seeds,
         baseline_condition=args.baseline or Path(baseline_path).stem,
         output_dir=Path(args.output_dir),
-        use_local_aggregators=not args.no_local_aggregators,
+        use_local_mp_spdz=not args.no_local_mp_spdz,
         skip_existing=args.skip_existing,
     )
     for label, path in paths.items():

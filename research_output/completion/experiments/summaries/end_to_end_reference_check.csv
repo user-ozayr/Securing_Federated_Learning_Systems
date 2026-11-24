@@ -1,0 +1,229 @@
+study,run_id,status,path,rounds_compared,max_abs_error,max_relative_error,max_model_abs
+e1,e1__baseline__backdoor__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,1.0953054655119644e-07,4.775515079498291
+e1,e1__baseline__backdoor__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.216998783092011e-07,6.096540927886963
+e1,e1__baseline__backdoor__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,9.975826445130109e-08,6.102036476135254
+e1,e1__baseline__label_flip__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.0589354641635182e-07,4.34060001373291
+e1,e1__baseline__label_flip__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,2.0770163691095793e-07,4.145319938659668
+e1,e1__baseline__label_flip__s103,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.9364563906275148e-07,4.094231128692627
+e1,e1__baseline__none__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.1855783349969297e-07,3.863039016723633
+e1,e1__baseline__none__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.1685768144304014e-07,3.9424314498901367
+e1,e1__baseline__none__s103,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.2399016950863896e-07,4.0452141761779785
+e1,e1__baseline__random_noise__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.4096897042279665e-07,4.058046340942383
+e1,e1__baseline__random_noise__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.2692004100256862e-07,3.9759254455566406
+e1,e1__baseline__random_noise__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,1.4942913374507396e-07,4.234290599822998
+e1,e1__baseline__scaled_replacement__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,6.952124158634296e-08,5.257229328155518
+e1,e1__baseline__scaled_replacement__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,9.592363632291258e-08,6.119487285614014
+e1,e1__baseline__scaled_replacement__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,1.4523053945663568e-07,5.842947959899902
+e1,e1__baseline__sign_flip__s101,completed,plaintext FedAvg,4,4179955.046875,2.842556013628817e-08,96599309025280.0
+e1,e1__baseline__sign_flip__s102,completed,plaintext FedAvg,4,9007199254740992.0,2.845672890961937e-08,3.0096641178272743e+23
+e1,e1__baseline__sign_flip__s103,completed,plaintext FedAvg,5,4096.000061035156,2.888081790394438e-08,134924337152.0
+e1,e1__mtd_only__backdoor__s101,completed,plaintext FedAvg,10,3.5762786865234375e-07,1.155339008897505e-07,9.415407180786133
+e1,e1__mtd_only__backdoor__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,8.041086362807846e-08,9.243833541870117
+e1,e1__mtd_only__backdoor__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,1.6250429009973459e-07,7.9735493659973145
+e1,e1__mtd_only__label_flip__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.5778112069319812e-07,3.940145254135132
+e1,e1__mtd_only__label_flip__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.4313760874219663e-07,4.322432518005371
+e1,e1__mtd_only__label_flip__s103,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.3655406459138261e-07,3.9627771377563477
+e1,e1__mtd_only__none__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.891058362154691e-07,3.666987895965576
+e1,e1__mtd_only__none__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.0147976276946962e-07,3.88948130607605
+e1,e1__mtd_only__none__s103,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.7901412403859311e-07,3.9958701133728027
+e1,e1__mtd_only__random_noise__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.1956695653465662e-07,3.6570260524749756
+e1,e1__mtd_only__random_noise__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.405939177804022e-07,4.088833332061768
+e1,e1__mtd_only__random_noise__s103,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.2933841239618545e-07,4.198978900909424
+e1,e1__mtd_only__scaled_replacement__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,9.3253042552793e-08,6.407224655151367
+e1,e1__mtd_only__scaled_replacement__s102,completed,plaintext FedAvg,10,1.7881393432617188e-07,1.8174716928207962e-07,7.887021064758301
+e1,e1__mtd_only__scaled_replacement__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,7.855348669430148e-08,5.8428850173950195
+e1,e1__mtd_only__sign_flip__s101,completed,plaintext FedAvg,5,3752999683883008.0,3.774466993439592e-08,1.0582054901956851e+23
+e1,e1__mtd_only__sign_flip__s102,completed,plaintext FedAvg,3,992.0,2.7701939620481296e-08,32997009408.0
+e1,e1__mtd_only__sign_flip__s103,completed,plaintext FedAvg,3,901120.0078125,2.769646848343142e-08,23033997688832.0
+e1,e1__smpc_clip__backdoor__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.1075974832979014e-07,3.4109621047973633
+e1,e1__smpc_clip__backdoor__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.0444645667871638e-07,3.319228410720825
+e1,e1__smpc_clip__backdoor__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.1773198937809575e-07,3.151369094848633
+e1,e1__smpc_clip__label_flip__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,9.690544198224922e-08,3.78756046295166
+e1,e1__smpc_clip__label_flip__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.0086679045489485e-07,3.520545482635498
+e1,e1__smpc_clip__label_flip__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.0933863210861048e-07,3.6784470081329346
+e1,e1__smpc_clip__none__s101,completed,SPDZ2k robust program,10,5.960464477539063e-08,8.247483786902329e-08,3.6015660762786865
+e1,e1__smpc_clip__none__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,8.573573804265128e-08,3.616199493408203
+e1,e1__smpc_clip__none__s103,completed,SPDZ2k robust program,10,5.960464477539063e-08,7.3892484633693e-08,3.582514762878418
+e1,e1__smpc_clip__random_noise__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,9.139933718173895e-08,3.1567699909210205
+e1,e1__smpc_clip__random_noise__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,8.158091130635244e-08,3.336591958999634
+e1,e1__smpc_clip__random_noise__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,8.79975317384584e-08,3.377467155456543
+e1,e1__smpc_clip__scaled_replacement__s101,completed,SPDZ2k robust program,10,5.960464477539063e-08,9.357276419219247e-08,3.7658259868621826
+e1,e1__smpc_clip__scaled_replacement__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.1094516087783892e-07,3.4443438053131104
+e1,e1__smpc_clip__scaled_replacement__s103,completed,SPDZ2k robust program,10,5.960464477539063e-08,9.737199224496089e-08,3.6413938999176025
+e1,e1__smpc_clip__sign_flip__s101,completed,SPDZ2k robust program,10,5.960464477539063e-08,8.636860538786838e-08,2.182751178741455
+e1,e1__smpc_clip__sign_flip__s102,completed,SPDZ2k robust program,10,5.960464477539063e-08,9.64502970501728e-08,2.1857032775878906
+e1,e1__smpc_clip__sign_flip__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.0422672454591605e-07,2.2742018699645996
+e1,e1__smpc_defence_mtd__backdoor__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.3776589294311798e-07,3.439439296722412
+e1,e1__smpc_defence_mtd__backdoor__s102,completed,SPDZ2k robust program,10,2.384185791015625e-07,1.9936278349438655e-07,6.832364082336426
+e1,e1__smpc_defence_mtd__backdoor__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.5284144103173456e-07,3.8536739349365234
+e1,e1__smpc_defence_mtd__label_flip__s101,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.44185732079602e-07,3.2823710441589355
+e1,e1__smpc_defence_mtd__label_flip__s102,completed,SPDZ2k robust program,10,2.384185791015625e-07,1.4713326903040292e-07,5.3301897048950195
+e1,e1__smpc_defence_mtd__label_flip__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.3783672293981367e-07,3.6500134468078613
+e1,e1__smpc_defence_mtd__none__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,9.767910296095579e-08,3.494922637939453
+e1,e1__smpc_defence_mtd__none__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.2426108966307397e-07,3.7750802040100098
+e1,e1__smpc_defence_mtd__none__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.271737913946892e-07,3.9119021892547607
+e1,e1__smpc_defence_mtd__random_noise__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.432557153759225e-07,3.5342845916748047
+e1,e1__smpc_defence_mtd__random_noise__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.581347853997854e-07,3.942061424255371
+e1,e1__smpc_defence_mtd__random_noise__s103,completed,SPDZ2k robust program,10,7.947285973752827e-08,1.6345641397743231e-07,3.8887429237365723
+e1,e1__smpc_defence_mtd__scaled_replacement__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.5961976311299894e-07,3.999974250793457
+e1,e1__smpc_defence_mtd__scaled_replacement__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.4512048693547484e-07,3.849900007247925
+e1,e1__smpc_defence_mtd__scaled_replacement__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.5753792403219356e-07,3.844099760055542
+e1,e1__smpc_defence_mtd__sign_flip__s101,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.5475930175303947e-07,3.7574615478515625
+e1,e1__smpc_defence_mtd__sign_flip__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.672515585325437e-07,3.864738941192627
+e1,e1__smpc_defence_mtd__sign_flip__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.4089481684875376e-07,4.050156116485596
+e1,e1__smpc_mtd__backdoor__s101,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.0004324964830029e-07,7.419799327850342
+e1,e1__smpc_mtd__backdoor__s102,completed,SPDZ2k sum-only program,10,9.5367431640625e-07,2.1595341359915073e-07,28.40376091003418
+e1,e1__smpc_mtd__backdoor__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,8.206532334013713e-08,8.044221878051758
+e1,e1__smpc_mtd__label_flip__s101,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.230363703209924e-07,3.880805253982544
+e1,e1__smpc_mtd__label_flip__s102,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,2.4530759624299886e-07,4.330633163452148
+e1,e1__smpc_mtd__label_flip__s103,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.440875040930468e-07,4.447902202606201
+e1,e1__smpc_mtd__none__s101,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.7944072830212598e-07,3.5444889068603516
+e1,e1__smpc_mtd__none__s102,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.8870392502554518e-07,3.806455612182617
+e1,e1__smpc_mtd__none__s103,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,2.0196731519702966e-07,3.900585412979126
+e1,e1__smpc_mtd__random_noise__s101,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.848053133301385e-07,3.9082236289978027
+e1,e1__smpc_mtd__random_noise__s102,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.8458731133268434e-07,3.880531072616577
+e1,e1__smpc_mtd__random_noise__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.993022486777702e-07,4.236002445220947
+e1,e1__smpc_mtd__scaled_replacement__s101,completed,SPDZ2k sum-only program,10,4.76837158203125e-07,9.068334963226703e-07,11.785368919372559
+e1,e1__smpc_mtd__scaled_replacement__s102,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.1323834824374485e-07,5.66910457611084
+e1,e1__smpc_mtd__scaled_replacement__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,2.0179333148550925e-07,11.0874605178833
+e1,e1__smpc_mtd__sign_flip__s101,aborted,SPDZ2k sum-only program,3,0.000244140625,3.1458630972721114e-08,7212.99072265625
+e1,e1__smpc_mtd__sign_flip__s102,aborted,SPDZ2k sum-only program,2,2.6226043701171875e-05,2.610355738000798e-08,951.5071411132812
+e1,e1__smpc_mtd__sign_flip__s103,completed,SPDZ2k sum-only program,10,5.459785461425781e-05,1.2911919554682411e-07,1377.349365234375
+e1,e1__smpc_only__backdoor__s101,completed,SPDZ2k sum-only program,10,1.7881393432617188e-07,9.817467798229205e-08,4.258335113525391
+e1,e1__smpc_only__backdoor__s102,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.1076069617041941e-07,5.696188449859619
+e1,e1__smpc_only__backdoor__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.2125558563724881e-07,6.837710857391357
+e1,e1__smpc_only__label_flip__s101,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,2.0490412288855232e-07,4.457408905029297
+e1,e1__smpc_only__label_flip__s102,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.8274624579262495e-07,3.918198585510254
+e1,e1__smpc_only__label_flip__s103,completed,SPDZ2k sum-only program,10,1.7881393432617188e-07,2.008898194249565e-07,4.165935039520264
+e1,e1__smpc_only__none__s101,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,2.4478972079207226e-07,3.734959125518799
+e1,e1__smpc_only__none__s102,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,2.0080127703572173e-07,4.016303062438965
+e1,e1__smpc_only__none__s103,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,2.3097968760858462e-07,3.968372106552124
+e1,e1__smpc_only__random_noise__s101,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.402336007696929e-07,3.999309778213501
+e1,e1__smpc_only__random_noise__s102,completed,SPDZ2k sum-only program,10,1.1920928955078125e-07,1.3410248678276579e-07,3.957493782043457
+e1,e1__smpc_only__random_noise__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,1.5598712656885305e-07,4.124031066894531
+e1,e1__smpc_only__scaled_replacement__s101,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,7.216005205072208e-08,5.381289958953857
+e1,e1__smpc_only__scaled_replacement__s102,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,8.669051914362193e-08,5.6230268478393555
+e1,e1__smpc_only__scaled_replacement__s103,completed,SPDZ2k sum-only program,10,2.384185791015625e-07,7.446746106000816e-08,5.886722087860107
+e1,e1__smpc_only__sign_flip__s101,aborted,SPDZ2k sum-only program,3,0.0003662109375,2.8958577809888487e-08,13528.515625
+e1,e1__smpc_only__sign_flip__s102,aborted,SPDZ2k sum-only program,2,7.577240467071533e-06,2.7847684369344184e-08,215.38063049316406
+e1,e1__smpc_only__sign_flip__s103,aborted,SPDZ2k sum-only program,4,0.015625,2.72725750191423e-08,282564.03125
+e1x,e1x__plaintext_robust__backdoor__s101,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__backdoor__s102,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__backdoor__s103,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__none__s101,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__none__s102,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__none__s103,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__scaled_replacement__s101,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__scaled_replacement__s102,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__scaled_replacement__s103,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__sign_flip__s101,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__sign_flip__s102,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__plaintext_robust__sign_flip__s103,completed,plaintext detector (no exact reference),0,,,
+e1x,e1x__smpc_defence__backdoor__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e1x,e1x__smpc_defence__backdoor__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e1x,e1x__smpc_defence__backdoor__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7448054699668525e-07,3.8985188007354736
+e1x,e1x__smpc_defence__none__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.4755712345236827e-07,3.826364040374756
+e1x,e1x__smpc_defence__none__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.1154541100959379e-07,3.943437337875366
+e1x,e1x__smpc_defence__none__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.336123297768253e-07,3.8080949783325195
+e1x,e1x__smpc_defence__scaled_replacement__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e1x,e1x__smpc_defence__scaled_replacement__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e1x,e1x__smpc_defence__scaled_replacement__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7448054699668525e-07,3.8985188007354736
+e1x,e1x__smpc_defence__sign_flip__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e1x,e1x__smpc_defence__sign_flip__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e1x,e1x__smpc_defence__sign_flip__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.7448054699668525e-07,3.8985188007354736
+e1x,e1x__smpc_screen__backdoor__s101,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6078131828927578e-07,3.822281837463379
+e1x,e1x__smpc_screen__backdoor__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.5853603122718595e-07,3.929805040359497
+e1x,e1x__smpc_screen__backdoor__s103,completed,SPDZ2k robust program,10,7.947285973752827e-08,1.7577965246344297e-07,3.78633713722229
+e1x,e1x__smpc_screen__none__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.0505402501859925e-07,3.829463481903076
+e1x,e1x__smpc_screen__none__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,7.606439286453709e-08,4.0099592208862305
+e1x,e1x__smpc_screen__none__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,9.970967523840491e-08,3.8989417552948
+e1x,e1x__smpc_screen__scaled_replacement__s101,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6078131828927578e-07,3.822281837463379
+e1x,e1x__smpc_screen__scaled_replacement__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.5853603122718595e-07,3.929805040359497
+e1x,e1x__smpc_screen__scaled_replacement__s103,completed,SPDZ2k robust program,10,7.947285973752827e-08,1.7577965246344297e-07,3.78633713722229
+e1x,e1x__smpc_screen__sign_flip__s101,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.6078131828927578e-07,3.822281837463379
+e1x,e1x__smpc_screen__sign_flip__s102,completed,SPDZ2k robust program,10,7.947285970977269e-08,1.5853603122718595e-07,3.929805040359497
+e1x,e1x__smpc_screen__sign_flip__s103,completed,SPDZ2k robust program,10,7.947285973752827e-08,1.7577965246344297e-07,3.78633713722229
+e2,e2__baseline__adaptive_backdoor__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,1.0953054655119644e-07,4.775515079498291
+e2,e2__baseline__adaptive_backdoor__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.216998783092011e-07,6.096540927886963
+e2,e2__baseline__adaptive_backdoor__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,9.975826445130109e-08,6.102036476135254
+e2,e2__plaintext_robust__adaptive_backdoor__s101,completed,plaintext detector (no exact reference),0,,,
+e2,e2__plaintext_robust__adaptive_backdoor__s102,completed,plaintext detector (no exact reference),0,,,
+e2,e2__plaintext_robust__adaptive_backdoor__s103,completed,plaintext detector (no exact reference),0,,,
+e2,e2__smpc_clip__adaptive_backdoor__s101,completed,SPDZ2k robust program,10,5.960464477539063e-08,6.407393681243482e-08,3.500079870223999
+e2,e2__smpc_clip__adaptive_backdoor__s102,completed,SPDZ2k robust program,10,5.960464477539063e-08,6.686582645157759e-08,3.2970738410949707
+e2,e2__smpc_clip__adaptive_backdoor__s103,completed,SPDZ2k robust program,10,5.960464477539063e-08,7.2452902401601e-08,3.284994125366211
+e2,e2__smpc_defence_mtd__adaptive_backdoor__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,8.863956219352508e-08,3.772747039794922
+e2,e2__smpc_defence_mtd__adaptive_backdoor__s102,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.193754889809797e-07,4.04170036315918
+e2,e2__smpc_defence_mtd__adaptive_backdoor__s103,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.4083254055419537e-07,3.6346068382263184
+e3,e3__baseline__backdoor__deterministic__just_in_time__s101,completed,plaintext FedAvg,10,9.5367431640625e-07,1.3194106741856954e-07,21.8106632232666
+e3,e3__baseline__backdoor__deterministic__just_in_time__s102,completed,plaintext FedAvg,10,4.76837158203125e-07,5.633118241655109e-08,16.17802619934082
+e3,e3__baseline__backdoor__deterministic__just_in_time__s103,completed,plaintext FedAvg,10,4.76837158203125e-07,6.660976487074253e-08,13.249414443969727
+e3,e3__baseline__backdoor__deterministic__predictive__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,2.817600716154592e-07,6.033262252807617
+e3,e3__baseline__backdoor__deterministic__predictive__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.0020179082495593e-07,7.02093505859375
+e3,e3__baseline__backdoor__deterministic__predictive__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,1.4080644934825724e-07,9.155254364013672
+e3,e3__baseline__backdoor__secret__just_in_time__s101,completed,plaintext FedAvg,10,1.7881393432617188e-07,1.5975598892610175e-07,5.1216840744018555
+e3,e3__baseline__backdoor__secret__just_in_time__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,2.642055825520267e-07,7.17664098739624
+e3,e3__baseline__backdoor__secret__just_in_time__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,3.469308149040081e-07,6.056469440460205
+e3,e3__baseline__backdoor__secret__predictive__s101,completed,plaintext FedAvg,10,1.7881393432617188e-07,1.5133624593719814e-07,4.363856792449951
+e3,e3__baseline__backdoor__secret__predictive__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,2.244054804432479e-07,6.085559368133545
+e3,e3__baseline__backdoor__secret__predictive__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,2.11135895092485e-07,5.6942901611328125
+e3,e3__baseline__backdoor__static__just_in_time__s101,completed,plaintext FedAvg,10,4.76837158203125e-07,5.5548305130684296e-08,13.1923246383667
+e3,e3__baseline__backdoor__static__just_in_time__s102,completed,plaintext FedAvg,10,9.5367431640625e-07,6.346278358550898e-08,32.77404022216797
+e3,e3__baseline__backdoor__static__just_in_time__s103,completed,plaintext FedAvg,10,4.76837158203125e-07,5.109317589191989e-08,12.872564315795898
+e3,e3__baseline__backdoor__static__predictive__s101,completed,plaintext FedAvg,10,5.960464477539062e-07,7.475127356783922e-08,26.998165130615234
+e3,e3__baseline__backdoor__static__predictive__s102,completed,plaintext FedAvg,10,4.76837158203125e-07,4.44161440980624e-08,24.836519241333008
+e3,e3__baseline__backdoor__static__predictive__s103,completed,plaintext FedAvg,10,2.384185791015625e-07,7.197476259859776e-08,9.673643112182617
+e4,e4__baseline__backdoor__boost16__s101,completed,plaintext FedAvg,10,2.86102294921875e-06,2.505289755693029e-08,127.85381317138672
+e4,e4__baseline__backdoor__boost16__s102,completed,plaintext FedAvg,10,1.9073486328125e-06,2.4742079105116785e-08,111.15826416015625
+e4,e4__baseline__backdoor__boost1__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.7575133146158942e-07,3.995438814163208
+e4,e4__baseline__backdoor__boost1__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.882264260222725e-07,3.5288352966308594
+e4,e4__baseline__backdoor__boost2__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.5843993036102058e-07,3.9549317359924316
+e4,e4__baseline__backdoor__boost2__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.681342111540876e-07,3.6796274185180664
+e4,e4__baseline__backdoor__boost8__s101,completed,plaintext FedAvg,10,2.7418136596679688e-06,4.0079138259024226e-08,69.52384948730469
+e4,e4__baseline__backdoor__boost8__s102,completed,plaintext FedAvg,10,1.6987323760986328e-06,4.792387353248807e-08,52.991214752197266
+e4,e4__baseline__backdoor__m1__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.1855783349969297e-07,3.863039016723633
+e4,e4__baseline__backdoor__m1__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,2.1685768144304014e-07,3.9424314498901367
+e4,e4__baseline__backdoor__m2__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,1.0953054655119644e-07,4.775515079498291
+e4,e4__baseline__backdoor__m2__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.216998783092011e-07,6.096540927886963
+e4,e4__baseline__backdoor__m4__s101,completed,plaintext FedAvg,10,2.384185791015625e-07,1.0953054655119644e-07,4.775515079498291
+e4,e4__baseline__backdoor__m4__s102,completed,plaintext FedAvg,10,2.384185791015625e-07,1.216998783092011e-07,6.096540927886963
+e4,e4__baseline__backdoor__m5__s101,completed,plaintext FedAvg,10,4.76837158203125e-07,4.480312475112935e-08,14.345870971679688
+e4,e4__baseline__backdoor__m5__s102,completed,plaintext FedAvg,10,4.76837158203125e-07,4.562025572188269e-08,10.110958099365234
+e4,e4__baseline__sign_flip__str1__s101,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.839584594077784e-07,2.567913055419922
+e4,e4__baseline__sign_flip__str1__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.865632051845343e-07,2.6040048599243164
+e4,e4__baseline__sign_flip__str2__s101,completed,plaintext FedAvg,10,5.960464477539063e-08,1.2981407677451828e-07,2.0579638481140137
+e4,e4__baseline__sign_flip__str2__s102,completed,plaintext FedAvg,10,1.1920928955078125e-07,1.609469768592712e-07,2.960864543914795
+e4,e4__baseline__sign_flip__str8__s101,completed,plaintext FedAvg,3,2097152.0078125,3.023225832690942e-08,37895058489344.0
+e4,e4__baseline__sign_flip__str8__s102,completed,plaintext FedAvg,3,4096.0,2.666403298999827e-08,123241398272.0
+e4,e4__reference_defence__backdoor__boost16__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__backdoor__boost16__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e4,e4__reference_defence__backdoor__boost1__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.1380254693315755e-07,4.052177429199219
+e4,e4__reference_defence__backdoor__boost1__s102,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.0909194639811725e-07,3.942214012145996
+e4,e4__reference_defence__backdoor__boost2__s101,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6123236190299867e-07,3.730128765106201
+e4,e4__reference_defence__backdoor__boost2__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.7675739599784195e-07,3.7390804290771484
+e4,e4__reference_defence__backdoor__boost8__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__backdoor__boost8__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e4,e4__reference_defence__backdoor__default__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__backdoor__default__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e4,e4__reference_defence__backdoor__m1__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.4755712345236827e-07,3.826364040374756
+e4,e4__reference_defence__backdoor__m1__s102,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.1154541100959379e-07,3.943437337875366
+e4,e4__reference_defence__backdoor__m2__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__backdoor__m2__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e4,e4__reference_defence__backdoor__m4__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__backdoor__m4__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e4,e4__reference_defence__backdoor__m5__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,8.96555033726691e-08,3.962736129760742
+e4,e4__reference_defence__backdoor__m5__s102,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,7.252276016057349e-08,3.692378044128418
+e4,e4__reference_defence__sign_flip__str1__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,9.665702022391167e-08,2.6999125480651855
+e4,e4__reference_defence__sign_flip__str1__s102,completed,plaintext execution of the robust algorithm,10,5.960464477539063e-08,8.627060446920159e-08,2.598482131958008
+e4,e4__reference_defence__sign_flip__str2__s101,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.485512670574943e-07,3.2111713886260986
+e4,e4__reference_defence__sign_flip__str2__s102,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.6148311813767784e-07,3.763519525527954
+e4,e4__reference_defence__sign_flip__str8__s101,completed,plaintext execution of the robust algorithm,10,1.1920928955078125e-07,1.7085439657409737e-07,3.6653244495391846
+e4,e4__reference_defence__sign_flip__str8__s102,completed,plaintext execution of the robust algorithm,10,7.947285970977269e-08,1.6420066734708537e-07,3.8604860305786133
+e5,e5__baseline__backdoor__dir05__s101,completed,plaintext FedAvg,10,3.2787601977890546e-07,8.116895737709606e-08,10.778753280639648
+e5,e5__baseline__backdoor__dir05__s102,completed,plaintext FedAvg,10,2.343052569742099e-07,1.516349148382789e-07,7.330045223236084
+e5,e5__baseline__none__dir05__s101,completed,plaintext FedAvg,10,1.1018829404463304e-07,1.8094038610960593e-07,3.512301206588745
+e5,e5__baseline__none__dir05__s102,completed,plaintext FedAvg,10,2.3760940089370474e-07,3.6306172619492625e-07,7.19449520111084
+e5,e5__smpc_defence_mtd__backdoor__dir05__s101,completed,SPDZ2k robust program,10,1.0837208141989407e-07,1.721360368541624e-07,2.940641164779663
+e5,e5__smpc_defence_mtd__backdoor__dir05__s102,completed,SPDZ2k robust program,10,9.536743164617612e-08,1.4817939266694976e-07,3.1839005947113037
+e5,e5__smpc_defence_mtd__none__dir05__s101,completed,SPDZ2k robust program,10,1.1920928955078125e-07,1.760218671965168e-07,2.628110885620117
+e5,e5__smpc_defence_mtd__none__dir05__s102,completed,SPDZ2k robust program,10,7.94728596958949e-08,1.720523760797312e-07,3.2341814041137695

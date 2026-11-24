@@ -2,8 +2,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-def train_local(model, dataloader, epochs, lr, device="cpu", label_transform=None):
-    """Train locally, optionally applying a controlled data-poisoning transform."""
+def train_local(model, dataloader, epochs, lr, device="cpu", label_transform=None,
+                batch_transform=None):
+    """Train locally, optionally applying a controlled data-poisoning transform.
+
+    ``label_transform(labels)`` rewrites labels (label flipping);
+    ``batch_transform(images, labels)`` rewrites whole batches (trigger backdoor).
+    """
     if epochs <= 0 or lr <= 0:
         raise ValueError("epochs and learning rate must be positive")
     model.to(device)
@@ -13,6 +18,10 @@ def train_local(model, dataloader, epochs, lr, device="cpu", label_transform=Non
     for _ in range(epochs):
         for images, labels in dataloader:
             images, labels = images.to(device), labels.to(device)
+            if batch_transform is not None:
+                images, labels = batch_transform(images, labels)
+                images = images.to(device)
+                labels = labels.to(device=device, dtype=torch.long)
             if label_transform is not None:
                 labels = label_transform(labels)
                 if not torch.is_tensor(labels):

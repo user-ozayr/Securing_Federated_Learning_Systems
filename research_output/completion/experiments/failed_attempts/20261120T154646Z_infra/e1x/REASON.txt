@@ -1,0 +1,6 @@
+This attempt aborted in round 10 of 10 (9 rounds completed and saved) with
+ConnectionResetError [Errno 104] raised in ssl.do_handshake while a client
+connected to an MP-SPDZ party (MP-SPDZ ExternalIO/client.py); see run.log.
+Infrastructure fault on the shared host, unrelated to the attack or the defence.
+The attempt is kept unchanged here. The run was repeated with the same
+configuration and seed (suite_driver_pass3.log).

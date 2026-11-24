@@ -1,0 +1,30 @@
+attacks:
+  attack_type: sign_flip
+  enabled: true
+  num_malicious: 3
+  placement: stratified
+  strength: 8.0
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e4/e4__baseline__sign_flip__str8__s101
+  save_csv: true
+  save_plots: false
+experiment:
+  name: e4__baseline__sign_flip__str8__s101
+  rounds: 10
+  seed: 101
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.34
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: static
+smpc:
+  enabled: false

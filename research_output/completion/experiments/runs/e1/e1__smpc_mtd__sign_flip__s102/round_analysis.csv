@@ -1,0 +1,3 @@
+round,participants,malicious,applied_update_norm,deviation_from_honest,deviation_from_honest_relative,cosine_with_honest,malicious_share_submitted,malicious_share_effective,reference_max_abs_error,reference_relative_error,global_max_abs,reference_kind,instrumentation_ignored_entries,instrumentation_consistent
+1,4,2,14.537733534180598,19.185369849831606,2.4390920455820293,-0.4147862699184485,0.8080881366136615,0.8080881366136615,5.960464477539063e-08,2.610355738000798e-08,1.949586033821106,fedavg_fixed_point,2,1
+2,4,1,6366.001161317783,5907.633120024581,1.0136777516327313,0.5335567717795893,0.5559126182937627,0.5559126182937627,2.6226043701171875e-05,2.3963086417243806e-08,951.5071411132812,fedavg_fixed_point,3,1

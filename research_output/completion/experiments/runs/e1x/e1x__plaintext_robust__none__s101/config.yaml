@@ -1,0 +1,37 @@
+attacks:
+  enabled: false
+defences:
+  robust_aggregation:
+    enabled: true
+    history_cosine_threshold: -0.25
+    history_decay: 0.8
+    max_malicious: 1
+    max_norm_ratio: 2.0
+    min_cosine_similarity: 0.0
+    min_history_rounds: 2
+    min_survivors: 2
+    residual_z_threshold: 3.5
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1x/e1x__plaintext_robust__none__s101
+  save_csv: true
+  save_plots: false
+experiment:
+  name: e1x__plaintext_robust__none__s101
+  rounds: 10
+  seed: 101
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.34
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: static
+smpc:
+  enabled: false

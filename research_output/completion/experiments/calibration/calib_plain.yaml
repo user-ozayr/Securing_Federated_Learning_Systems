@@ -1,0 +1,6 @@
+experiment: {name: calib_plain_fmnist, seed: 101, rounds: 6}
+federated_learning: {framework: flower, dataset: fashion_mnist, model: compact_cnn, num_clients: 12, fraction_train: 0.34, local_epochs: 1, batch_size: 32, learning_rate: 0.05, partitioning: iid}
+mtd: {schedule: deterministic}
+smpc: {enabled: false}
+attacks: {enabled: false}
+evaluation: {output_dir: research_output/completion/experiments/calibration/runs, save_csv: true, save_plots: false, instrumentation: true}

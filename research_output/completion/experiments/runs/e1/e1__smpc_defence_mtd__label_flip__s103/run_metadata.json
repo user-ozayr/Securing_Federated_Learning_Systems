@@ -1,0 +1,52 @@
+{
+  "run_id": "e1__smpc_defence_mtd__label_flip__s103",
+  "study": "e1",
+  "condition": "smpc_defence_mtd",
+  "attack": "label_flip",
+  "seed": 103,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "7345dfd0ef4c76752b9990cefd7c263592c08420ea46375e5366c711820c5a6a",
+  "config_sha256": "fa4b0caf5ead2e43bf9f758a899a2eca44686e3e014e4e0cb63ec76ba6dac1b6",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_defence_mtd__label_flip__s103.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T06:12:18Z",
+  "load_average_start": [
+    3.98291015625,
+    3.86376953125,
+    3.39794921875
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 348.548,
+  "finished_utc": "2026-11-20T06:18:07Z",
+  "load_average_end": [
+    4.44189453125,
+    4.42041015625,
+    3.78564453125
+  ],
+  "analysis": {
+    "final_accuracy": 0.8328,
+    "final_loss": 0.4595716773033142,
+    "final_backdoor_asr": 0.01633333333333333,
+    "mean_deviation_from_honest_relative": 0.2752533211343486,
+    "mean_malicious_share_effective": 0.16581342455777356,
+    "mean_malicious_share_submitted": 0.27087859282640714,
+    "mean_reference_max_abs_error": 8.245309193882778e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.2752533211343486,
+    "mean_malicious_share_effective": 0.16581342455777356,
+    "mean_malicious_share_submitted": 0.27087859282640714,
+    "mean_reference_max_abs_error": 8.245309193882778e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 7.8797448906335e-08,
+    "max_reference_relative_error": 1.3783672293981367e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

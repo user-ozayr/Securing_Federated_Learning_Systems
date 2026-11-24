@@ -1,0 +1,4 @@
+parameters,compile_wall_seconds,peak_rss_mib,triples,multiplications,opens,rounds,status,log
+50000,42.742,930.5,200190,50187,50007,29,PASS,array_reveal_50001.log
+100000,87.136,1861.2,400190,100187,100007,29,PASS,array_reveal_100001.log
+250000,120.363,3938.4,,,,,TIMEOUT_120S,array_reveal_250001.log

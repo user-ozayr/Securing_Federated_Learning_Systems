@@ -1,0 +1,35 @@
+attacks:
+  adversary_model: just_in_time
+  attack_type: backdoor
+  backdoor:
+    poison_fraction: 0.5
+    target_label: 0
+    trigger_size: 4
+  boost: 4.0
+  enabled: true
+  num_malicious: 2
+  placement: random
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e3/e3__baseline__backdoor__deterministic__just_in_time__s103
+  save_csv: true
+  save_plots: false
+experiment:
+  name: e3__baseline__backdoor__deterministic__just_in_time__s103
+  rounds: 10
+  seed: 103
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.34
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: deterministic
+smpc:
+  enabled: false

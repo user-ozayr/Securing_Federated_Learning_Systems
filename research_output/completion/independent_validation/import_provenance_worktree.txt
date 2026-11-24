@@ -1,0 +1,49 @@
+tree under test: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis
+other tree on sys.path via editable install: /home/ubuntu/gemini/fl-security-research/src
+sys.path (first 4): ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/tools', '/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src', '/home/ubuntu/.local/share/uv/python/cpython-3.11.18-linux-aarch64-gnu/lib/python311.zip', '/home/ubuntu/.local/share/uv/python/cpython-3.11.18-linux-aarch64-gnu/lib/python3.11']
+ok  fl_security [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security', '/home/ubuntu/gemini/fl-security-research/src/fl_security']]
+ok  fl_security.attacks [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/attacks', '/home/ubuntu/gemini/fl-security-research/src/fl_security/attacks']]
+ok  fl_security.attacks.backdoor -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/attacks/backdoor.py
+ok  fl_security.attacks.byzantine -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/attacks/byzantine.py
+ok  fl_security.attacks.label_flip -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/attacks/label_flip.py
+ok  fl_security.attacks.sign_flip -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/attacks/sign_flip.py
+ok  fl_security.config -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/config.py
+ok  fl_security.evaluation [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/evaluation', '/home/ubuntu/gemini/fl-security-research/src/fl_security/evaluation']]
+ok  fl_security.evaluation.csv_safety -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/evaluation/csv_safety.py
+ok  fl_security.evaluation.metrics -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/evaluation/metrics.py
+ok  fl_security.evaluation.statistics -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/evaluation/statistics.py
+ok  fl_security.experiments -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/experiments/__init__.py
+ok  fl_security.experiments.analysis -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/experiments/analysis.py
+ok  fl_security.experiments.grid -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/experiments/grid.py
+ok  fl_security.experiments.report -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/experiments/report.py
+ok  fl_security.experiments.suite -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/experiments/suite.py
+ok  fl_security.federated [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated', '/home/ubuntu/gemini/fl-security-research/src/fl_security/federated']]
+ok  fl_security.federated.aggregation -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/aggregation.py
+ok  fl_security.federated.dataset -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/dataset.py
+ok  fl_security.federated.flower_simulation -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py
+ok  fl_security.federated.model -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/model.py
+ok  fl_security.federated.robust_aggregation -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/robust_aggregation.py
+ok  fl_security.federated.training -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/training.py
+ok  fl_security.logging [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/logging', '/home/ubuntu/gemini/fl-security-research/src/fl_security/logging']]
+ok  fl_security.logging.experiment_logger -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/logging/experiment_logger.py
+ok  fl_security.mtd [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd', '/home/ubuntu/gemini/fl-security-research/src/fl_security/mtd']]
+ok  fl_security.mtd.client_selection -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd/client_selection.py
+ok  fl_security.mtd.controller -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd/controller.py
+ok  fl_security.mtd.exposure -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd/exposure.py
+ok  fl_security.mtd.randomness -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd/randomness.py
+ok  fl_security.mtd.simulation -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/mtd/simulation.py
+ok  fl_security.smpc [namespace; search order ['/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc', '/home/ubuntu/gemini/fl-security-research/src/fl_security/smpc']]
+ok  fl_security.smpc.benchmark -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/benchmark.py
+ok  fl_security.smpc.fixed_point -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/fixed_point.py
+ok  fl_security.smpc.local_demo -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/local_demo.py
+ok  fl_security.smpc.mp_spdz -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/mp_spdz.py
+ok  fl_security.smpc.mp_spdz_party_service -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/mp_spdz_party_service.py
+ok  fl_security.smpc.robust -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/robust.py
+ok  fl_security.smpc.transport -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/transport.py
+ok  fl_security.smpc.validation -> /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/smpc/validation.py
+loaded fl_security modules with a file outside the tree: none
+modules present only in the other tree: 3
+  fl_security.smpc.additive_sharing: referenced by tree under test: no
+  fl_security.smpc.aggregator_server: referenced by tree under test: no
+  fl_security.smpc.client_sharing: referenced by tree under test: no
+RESULT: PASS

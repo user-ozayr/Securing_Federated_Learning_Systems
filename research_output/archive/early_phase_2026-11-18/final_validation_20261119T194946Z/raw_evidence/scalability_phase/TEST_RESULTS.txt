@@ -1,0 +1,9 @@
+SPDZ2k continuation validation, 2026-11-18
+Isolated branch: research/spdz2k-thesis, HEAD ab2de22da9e2e4d707295b9414bbe843f375ea39.
+
+Python 3.11 compileall: PASS.
+Full pytest: 70 passed, 2 Typer/Click dependency deprecation warnings in 5.54s; PYTHONPATH=src required due shared editable install.
+Tiny Flower/SPDZ2k: 3 clients, 3 parties, 8 params, one round, PASS; 16.32s total; aggregation 0.807365s; 73,728-byte metric; zero fit failures.
+Exact production-source compile with 6 GiB/120s caps: 250k, 500k, and 2,122,187 parameters all PASS in 1.780/1.775/1.751s, 62.2MiB peak RSS; 1,003,706/2,003,130/8,491,194 triples; 29 rounds each. See PRODUCTION_CIRCUIT_SCALING_FINAL.csv.
+Full-shape three-party direct production client-I/O run: TIMEOUT at 300s; safe cleanup; no aggregate or protocol metrics. Not a Flower full-size round. See FULL_SHAPE_MPC_INTEGRATION.log.
+Cross-host: NOT RUN; one host available.

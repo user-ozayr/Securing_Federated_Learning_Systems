@@ -1,348 +1,222 @@
-# Securing Federated Learning: MTD + two-stage additive SMPC
+# Securing Federated Learning with MTD and MP-SPDZ
 
-Research prototype for the master's thesis on horizontal federated learning,
-Moving Target Defence (MTD), poisoning attacks, and client-side additive
-secret sharing for secure aggregation.
+Research prototype for horizontal federated learning, Moving Target Defence
+(MTD), poisoning experiments, and secure aggregation using MP-SPDZ v0.4.3
+with the SPDZ2k protocol – including an integrity defence that runs **inside**
+the secure computation (per-client L2 clipping and norm screening with an
+adaptive, median-based threshold; see `docs/secure_robust_aggregation.md`).
 
-## Quick start: end-to-end local simulation
+Entry points: `run_experiment.py` (one run), `run_suite.py` (evaluation grid),
+`analyze_suite.py` (tables/figures), `run_mpc_validation.py` (SPDZ2k vs exact
+reference), `run_mpc_benchmark.py` (SPDZ2k cost), `run_mtd_exposure.py`
+(schedule predictability). Setup and reproduction: `docs/reproduction.md`.
+Completion evidence and reports: `research_output/completion/`.
 
-Use Python 3.11 and install the Flower simulation extra:
+## Requirements and local demonstration
+
+Use Python 3.11, install the Flower simulation extra, and build the pinned
+MP-SPDZ release on a supported Linux host:
 
     python -m pip install -e ".[simulation,dev]"
     pytest -q
-    env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python run_experiment.py --config configs/benchmark_lr001/baseline.yaml
-    env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python run_experiment.py --config configs/benchmark_lr001/hybrid_verified.yaml --local-aggregators
 
-The local command starts one separate aggregation-party process per
-smpc.num_aggregation_parties, runs the Flower simulation, then shuts the
-party processes down. CIFAR-10 is downloaded by torchvision into ./data;
-metrics are written to ./results.
+The local MP-SPDZ demonstration requires a pre-built MP-SPDZ v0.4.3 tree. Set
+`FL_MPSPDZ_HOME` to that tree and run:
 
-The experiment server is pinned to the legacy Flower 1.38.x simulation API
-(start_simulation plus a custom Strategy). It is not yet migrated to the
-ClientApp/ServerApp project model.
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+      python run_experiment.py \
+      --config configs/benchmark_lr001/hybrid_verified.yaml --local-mp-spdz
 
-## Training stability and reproduction
+The documented primary hybrid configuration is
+`configs/benchmark_lr001/hybrid_verified.yaml`: MTD selection, SPDZ2k aggregation,
+and sign-flip simulation are enabled; contribution clipping is not implemented.
+It requests four aggregation parties. The command is the intended full-model
+entry point, but a full CIFAR Flower round has not yet completed successfully;
+see `docs/experimental_methodology.md` and the runtime reports before making
+scalability claims.
 
-With seed 42, five CIFAR-10 clients, one local epoch, and batch size 32, the
-historical learning rate of 0.1 caused client 1 to produce non-finite local
-weights. Flower reported two results and one client failure; Ray had dispatched
-the clients successfully. The same one-round setup at 0.01 completed all three
-selected clients. The `client_fn(cid)` deprecation warning is separate from
-this numerical failure.
+This command creates temporary party and client TLS credentials, starts one
+party-control service per configured MPC party, runs Flower, and shuts the
+services down. CIFAR-10 is downloaded by torchvision into `./data`; metrics
+are written to the configured output directory. The local demo requires Linux
+and MP-SPDZ build tools.
 
-The original experiment configs remain unchanged. Use the configs under
-`configs/benchmark_lr001/` for the stabilized benchmark. The clean baseline is
-`configs/benchmark_lr001/baseline.yaml`; the hybrid run is
-`configs/benchmark_lr001/hybrid_verified.yaml`.
+The party processes, Flower server, and simulated clients share one host and
+kernel in this demonstration. It validates protocol integration and message
+flow, not isolation from a compromised host, coordinator, worker, or party.
 
-The local party processes share one host and kernel with the coordinator and
-clients. The local helper places the per-client token map in the shared
-simulation worker environment so credentials can be routed by client ID; this
-is a wiring/demo convenience, not credential isolation. A compromised local
-worker or coordinator can inspect that map. This demonstrates the complete
-message flow only, not protection against a malicious local host, coordinator,
-or simulated client. It is not a multi-host trust-boundary deployment.
+The server uses the Flower 1.38.x simulation API (`start_simulation` and a
+custom strategy); migration to Flower's ClientApp/ServerApp model is not part
+of this prototype.
 
-## External aggregation-party deployment
+## Distributed deployment
 
-Run each party as its own process, preferably on a separate host or a
-separately administered container. Each party needs:
-- FL_SMPC_CLIENT_KEYS_JSON: a client-ID-to-token map for client uploads to this party.
-- FL_SMPC_CONTROL_TOKEN: a unique coordinator-to-party control secret.
-- FL_SMPC_PEER_ENDPOINTS_JSON: URLs for every other party.
-- FL_SMPC_PEER_TOKENS_JSON: symmetric pairwise HMAC secrets shared with every other party.
+Each aggregation party needs:
 
-Example for party 0 in a four-party deployment:
+- The same MP-SPDZ v0.4.3 build and the packaged
+  `spdz2k_weighted_sum.mpc` program.
+- Its party TLS certificate and private key under `Player-Data/`.
+- A party IP file listing every party as `host:port`, with the same party
+  order on each host.
+- A unique coordinator control token, provisioned only to that party and the
+  coordinator.
+- A reachable client-I/O port at `FL_MPSPDZ_CLIENT_PORT_BASE + party_id`.
 
-    export FL_SMPC_CLIENT_KEYS_JSON='{"0":"CLIENT0_PARTY0_SECRET","1":"CLIENT1_PARTY0_SECRET"}'
-    export FL_SMPC_CONTROL_TOKEN='PARTY0_COORDINATOR_SECRET'
-    export FL_SMPC_PEER_ENDPOINTS_JSON='{"1":"https://party1.example.org","2":"https://party2.example.org","3":"https://party3.example.org"}'
-    export FL_SMPC_PEER_TOKENS_JSON='{"1":"LINK_0_1","2":"LINK_0_2","3":"LINK_0_3"}'
-    python -m fl_security.smpc.aggregator_server --party-id 0 --party-count 4 --host 0.0.0.0 --port 8700
+Run one party service per host/container with
+`python -m fl_security.smpc.mp_spdz_party_service`. Configure the service
+environment with `FL_MPSPDZ_HOME`, `FL_MPSPDZ_WORK_DIR`, `FL_MPSPDZ_IP_FILE`,
+`FL_MPSPDZ_PARTY_ID`, `FL_MPSPDZ_PARTY_COUNT`,
+`FL_MPSPDZ_CLIENT_PORT_BASE`, and `FL_MPSPDZ_CONTROL_TOKEN`. The optional
+`FL_MPSPDZ_SERVICE_HOST`, `FL_MPSPDZ_SERVICE_PORT`, and
+`FL_MPSPDZ_ROUND_TIMEOUT` control its listener and timeout.
 
-Repeat for parties 1, 2 and 3. Each pairwise token must be provisioned to
-exactly the two parties in that pair (for example, the token named LINK_0_1
-must be the same on parties 0 and 1, and unavailable to parties 2 and 3).
-Every party must know the URL of all other parties. The coordinator's
-FL_SMPC_AGGREGATORS_JSON contains each party URL and that party's unique
-control token.
+The Flower coordinator must set `FL_MPSPDZ_HOME`,
+`FL_MPSPDZ_CLIENT_PORT_BASE`, `FL_MPSPDZ_CLIENT_CREDENTIALS_DIR`, and
+`FL_MPSPDZ_PARTIES_JSON`. The party JSON maps each ID to a control URL, a
+unique control token, and the host clients use for MP-SPDZ client I/O:
 
-Each real client runtime must receive only its own
-FL_SMPC_CLIENT_TOKENS_JSON map from party ID to that client's write token.
-Provision the credentials through a secret manager or deployment platform;
-never commit them to Git, put them in YAML, or send them in Flower round
-configuration. The local helper is not a suitable credential-isolation
-mechanism for real multi-tenant clients.
+    {
+      "0": {"control_url": "https://party0.example.org:8710",
+            "control_token": "<party-0-secret>", "client_host": "party0.example.org"},
+      "1": {"control_url": "https://party1.example.org:8710",
+            "control_token": "<party-1-secret>", "client_host": "party1.example.org"}
+    }
 
-The aggregation-party service implements HTTP routes but does not terminate
-TLS itself. For external network deployment, put each service behind HTTPS
-with TLS/mTLS (or an equivalently trusted service mesh), restrict ingress,
-and use HTTPS URLs. The built-in service does not implement account
-provisioning, persistent storage, or audit logging.
+Provision each real client runtime with only its own MP-SPDZ client certificate
+and key, plus the client-I/O hosts/port configuration. The designated output
+client ID is the configured client count; provision its certificate separately
+to the coordinator/output runtime. Client certificates, control tokens, and
+the MTD secret must come from a secret manager or deployment platform, never
+from source control, YAML, or Flower fit configuration.
+
+The party-control endpoints must use HTTPS outside loopback. The included
+service does not terminate TLS; use a reverse proxy or trusted service mesh,
+restrict ingress, and preserve TLS through redirects. MP-SPDZ party-to-party
+and client-to-party networking must also be allowed by the deployment's
+firewall, and hosts must have clocks synchronized within five minutes for
+replay-protected control requests. Cross-host deployment has not been validated by this repository's
+integration tests; do not treat the local demonstration as that validation.
+
+## What the secure round does
+
+1. Flower selects the cohort using MTD. MTD changes client participation; it
+   does not assign committees.
+2. The coordinator starts the same parameterized SPDZ2k circuit at every
+   party. Each party compiles the packaged source and verifies its compiled
+   bytecode hash matches the others.
+3. Each selected client trains locally, applies configured poisoning, then
+   encodes each floating-point model tensor multiplied by its sample count.
+   The client sends its authenticated private input directly to all parties.
+4. The Flower fit result contains no model tensors. The server verifies each
+   result's Flower proxy identity, selected-client membership, and
+   server-known sample count. Any missing client, failed client, malformed
+   input, party error, or MAC failure aborts the secure round.
+5. SPDZ2k computes the weighted sum and total sample count. Only the designated
+   output client receives those values; it reconstructs the average and the
+   coordinator broadcasts the new global model.
+6. Every party must finish successfully. On any failure, the coordinator
+   stops the parties and requests cleanup. There is no additive-sharing or
+   plaintext fallback in an SMPC-enabled run.
+
+With `smpc.defence.enabled: true` the round uses
+`spdz2k_robust_aggregate.mpc` instead: clients submit their update
+`w_local − w_global` at scale `2^f`; inside SPDZ2k the parties compute each
+client's squared norm, an optional lower-median threshold, screening (revealed
+accept bit) and/or clipping with secret coefficients, and reveal only the
+clipped weighted sum, the threshold and declared flags. The coordinator checks
+the aggregate norm before applying the update; a failed check keeps the
+previous model (only possible with malformed, wrapping inputs).
+
+Non-SMPC configurations explicitly use ordinary sample-weighted FedAvg and
+send client model arrays to the coordinator. The plaintext detector
+(`defences.robust_aggregation`) and the plaintext execution of the norm defence
+(`defences.norm_defence_reference`) are baselines for comparison only; the
+plaintext detector cannot be combined with SPDZ2k because its per-client scoring
+needs individual updates.
 
 ## MTD randomness
 
-For reproducible thesis runs, leave FL_MTD_SECRET unset: MTD selection and
-committee assignments are deterministic from the experiment seed and round.
-This mode is intended for repeatable simulation only; a public experiment seed
-does not provide unpredictability against an adversary who knows it.
-
-For a live deployment, set a randomly generated secret in the Flower server
-environment only:
+For repeatable simulations, leaving `FL_MTD_SECRET` unset makes client
+selection deterministic from the experiment seed and round. This is not
+unpredictable against an adversary who knows the seed. For deployment, set a
+random secret in the Flower server environment:
 
     export FL_MTD_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 
 The controller derives a round-scoped HMAC-SHA256 counter stream from this
-secret and the experiment seed. Rejection sampling avoids modulo bias when
-selecting clients and assigning committee positions. The keyed stream is
-unpredictable to parties that do not know FL_MTD_SECRET. The secret is not sent
-in Flower client configuration or to aggregation parties. Keep it in the
-server's secret manager, rotate it deliberately, and do not publish it with
-experimental configs. Record whether secret-seeded MTD was enabled, but never
-record the secret itself.
-
-## Data flow
-
-1. Flower selects clients using the round-scoped MTD controller.
-2. The coordinator sends the current global model, the selected client's
-   committee IDs, and the relevant party URLs. It does not send client
-   authentication secrets in Flower's fit configuration.
-3. Each client trains locally and applies configured label flipping or
-   model-update poisoning.
-4. In SMPC mode the client sample-weights and fixed-point encodes its
-   floating-point model tensors, creates additive shares over the prime field
-   Z_q using OS-backed cryptographic randomness, and POSTs one share directly
-   to each party in its assigned committee.
-5. The Flower client returns an empty parameter payload and its local example
-   count. The coordinator binds each FitRes to the registered Flower proxy ID
-   and rejects a missing, duplicate, unregistered, unselected, or mismatched
-   client-reported logical ID. It verifies the reported count against the
-   server-known simulation partition and uses the server-known count for
-   weighting. No individual update arrays reach the Flower coordinator.
-6. Each aggregation party authenticates client uploads and sums the shares
-   addressed to it for the successful participant set. It does not return
-   this first-stage partial sum to the coordinator.
-7. Each party creates fresh additive shares of its first-stage partial sum
-   and sends one re-share directly to every other party. Pairwise party HMAC
-   keys authenticate these second-stage messages.
-8. Each party sums the second-stage shares received from all source parties
-   and returns one random share of the global aggregate. The coordinator
-   combines only these second-stage shares, decodes the fixed-point result,
-   divides by total sample count, and broadcasts the new global model.
-9. After reconstruction the coordinator acknowledges every party; services
-   clear client shares, re-share buffers, and cached output shares.
-
-In non-SMPC configurations, Flower returns model arrays to the coordinator
-and ordinary sample-weighted FedAvg is used. The server verifies each FitRes
-logical client ID against its registered Flower proxy ID before accepting the
-result. This is an identity-consistency check within the Flower runtime, not a
-standalone cryptographic client-authentication mechanism; external deployments
-must still authenticate and protect their Flower transport and client runtime.
-
-## Output-file and CSV safety
-
-Experiment result filenames are restricted to a single file component within
-the configured output directory; path separators, traversal components and
-symbolic-link output targets are rejected. CSV exports neutralize formula-like
-text cells (including values beginning with `=`, `+`, `-` or `@`) so
-spreadsheet applications treat them as text. Numeric values remain numeric.
-Benchmark CSVs and experiment logs use the same sanitizer.
-
-The legacy root-level `audit_artifacts.py`, `generate_audit_artifacts.py`,
-and `generate_reports.py` scripts are not part of the current pipeline;
-`run_benchmark.py` is the supported report-generation path.
+secret and the experiment seed. The secret is not sent to clients or MPC
+parties. It is not logged; experiment output records only whether secret-based
+MTD was enabled.
 
 ## Security model and limitations
 
-The intended confidentiality assumptions are: fewer than all parties in a
-client's committee collude; fewer than all aggregation parties collude in the
-second-stage re-sharing; transport channels are authenticated and confidential;
-client credentials remain secret; and the coordinator follows the protocol.
-The coordinator sees client identities and participation metadata, the global
-model, the final aggregate, and second-stage random shares. It does not see
-first-stage committee partial sums, individual client shares, or raw client
-model arrays in SMPC mode. A coalition that obtains every first-stage share
-for a client can reconstruct that client's weighted update.
+SPDZ2k provides malicious-secure computation with abort under its protocol
+assumptions. For the configured dishonest-majority deployment, confidentiality
+requires at least one aggregation party to remain honest. A party dropout,
+client dropout, timeout, or protocol/MAC failure aborts the round; there is no
+dropout recovery. Collusion of all parties, compromise of client or party
+credentials, or compromise of the endpoint that receives the aggregate is
+outside the confidentiality guarantee.
 
-The coordinator is assumed honest-but-curious. A malicious coordinator that
-sends inconsistent models, selects overlapping cohorts to difference out
-participants, or deviates from the aggregation protocol is not covered. A
-small-cohort global aggregate can itself reveal information, especially when
-an observer already knows other participants' updates; the configured
-minimum cohort reduces trivial single-client releases but is not a formal
-differential-privacy guarantee.
+The coordinator sees the selected client IDs, participation and failure
+metadata, the current global model, and the final weighted aggregate. It does
+not receive individual client model tensors through Flower in SMPC mode.
+Small-cohort aggregates can reveal information, especially to observers who
+already know other participants' updates; the configured minimum cohort is
+not differential privacy. A malicious client can submit a poisoning update:
+SPDZ2k protects the computation, not whether local training or the submitted
+update is honest. The optional in-MPC defence bounds each accepted client's
+contribution (clipping/screening); it does not remove poisoning whose update
+looks honest in magnitude, and colluding clients that deviate from the encoding
+can exceed the per-client bound (the output check still bounds the applied
+update). There are no per-coordinate range proofs, no differential privacy and
+no membership-inference protection. Client-side clipping would not enforce a
+bound against a malicious client and is not used.
 
-This is a research prototype, not a cryptographic security proof or a
-production MPC implementation. In particular:
-
-- The local demo starts separate processes on one host; a host/root/kernel
-  compromise can read all processes. Use separate administration domains for
-  a meaningful cross-party trust boundary.
-- The protocol is semi-honest. It does not provide malicious-secure MPC,
-  verifiable computation, zero-knowledge range proofs, or Byzantine
-  aggregation-party resistance.
-- Party control tokens are held by the coordinator. Pairwise party keys are
-  shared only by the two parties in that link. Client runtimes must receive
-  only their own per-party write tokens. Provisioning and rotation remain
-  deployment responsibilities.
-- Share transport uses authenticated HMAC requests. Network confidentiality
-  requires HTTPS/mTLS or a trusted secure service mesh; the service itself
-  binds plain HTTP.
-- Party round state is held in memory. Acknowledgements clear state after
-  successful reconstruction, but restart recovery, persistent storage,
-  garbage collection after crashed rounds, and availability/fault tolerance
-  require further work.
-- No Shamir threshold recovery or dropout reconstruction is implemented.
-  A party outage or too few successful client uploads aborts the secure round.
-  The second sharing stage is not a substitute for threshold recovery.
-- There are no range proofs. Honest clients must remain within the configured
-  centred-field range. A malicious client can submit arbitrary updates; the
-  protocol protects confidentiality, not integrity.
-- MTD changes participation and committee assignment. It is not a
-  Byzantine-robust aggregation algorithm and does not neutralize poisoning.
-- Differential privacy, backdoor triggers and attack-success rate, membership
-  inference, property inference, and gradient inversion are outside the
-  current implementation and must not be claimed as mitigated.
-
-See docs/threat-model.md for the assumptions, data-flow boundary, implemented
-protections, and out-of-scope threats in a thesis-oriented structure.
-
-## Multi-seed benchmark and statistical comparison
-
-Run baseline, MTD-only, additive-sharing-only and hybrid conditions with
-identical seed lists:
-
-    python run_benchmark.py \
-      --configs configs/baseline_sign_flip.yaml configs/mtd_sign_flip.yaml \
-                 configs/smpc_sign_flip.yaml configs/hybrid.yaml \
-      --baseline baseline_sign_flip --seeds 5
-
-The runner writes one CSV per condition/seed under results/benchmark/runs,
-then produces:
-- all_rounds.csv: every round from every seed and condition.
-- summary_by_round.csv: per-condition/per-round mean, sample standard deviation,
-  and two-sided 95% Student-t confidence intervals for up to 31 seeds (a
-  normal approximation is used for larger samples).
-- paired_accuracy_differences.csv: per-seed paired differences in global test
-  accuracy and loss against the chosen baseline.
-- condition_metadata.csv: attack, defence and seed metadata.
-
-Use at least five seeds for an initial thesis comparison and more when compute
-allows. A one-seed run deliberately reports no confidence interval. These
-summaries quantify clean global test accuracy and overhead; they are not
-backdoor attack-success rates. Do not report ASR or inference-resistance
-claims from these runs.
+See [docs/threat-model.md](docs/threat-model.md) for the trust boundaries,
+assumptions, and out-of-scope threats.
 
 ## Reproducible evaluation
 
-Compare FedAvg, MTD-only, additive-SMPC-only, and hybrid configurations while
-holding the dataset, partitioning, model, local epochs, optimizer, client
-fraction, malicious-client population, and paired random seeds constant.
-Report mean, standard deviation, confidence intervals, clean test accuracy,
-malicious-client participation, paired accuracy/loss differences, aggregation
-time, party count, and application share payload bytes. The byte count excludes
-HTTP/TLS framing and transport retries; report it as application payload, not
-total network traffic.
+The completion evaluation is defined in `src/fl_security/experiments/grid.py`
+(Fashion-MNIST, 2,202-parameter CNN, 12 clients, 4 per round, 3 seeds; six core
+configurations from FedAvg to SPDZ2k + secure defence + MTD; six attack
+scenarios including a trigger backdoor with attack-success rate; adaptive,
+MTD-predictability, sweep and non-IID studies). Run it with `run_suite.py`
+(resumable, one process per run) and aggregate with `analyze_suite.py`.
+Per-round CSVs report clean accuracy and loss, backdoor ASR, malicious
+participation, defence decisions, round time, MP-SPDZ-measured protocol time and
+global traffic, and application-level input bytes. Methodology:
+`docs/experimental_methodology.md`. The older paired runner `run_benchmark.py`
+remains available.
 
-## Poisoning detection and robust aggregation (plaintext validation mode)
+Results of the completion evaluation (228 runs, same-host deployment) are in
+`research_output/completion/FINAL_VALIDATION_REPORT.md`; limitations are listed
+in `research_output/completion/SECURITY_LIMITATIONS.md`. In short:
 
-The optional robust-update module is a first integrity layer for research
-experiments. It computes each completed client's update relative to the
-current global model and scores four signals: MAD-normalized distance from
-the coordinate-wise median, cosine alignment with the current cohort median
-direction, update norm relative to the cohort median norm, and temporal
-contribution consistency measured by cosine similarity with an exponential
-moving average of that client's previously accepted update directions.
-Historical profiles are updated only from non-flagged clients after a
-successful screened-FedAvg round. Suspicious updates can be excluded before
-sample-weighted FedAvg. If screening would leave fewer than the configured
-minimum survivors, the implementation falls back to coordinate-wise median
-aggregation and does not update client history. The experiment logs detected,
-accepted and flagged client IDs, individual score details, and detection
-true-positive/false-positive/false-negative counts against simulator ground
-truth.
+* **Exactness.** The SPDZ2k robust program is bit-exact against its reference.
+* **Secure aggregation alone.** Sum-only SPDZ2k does not reduce poisoning.
+* **The in-MPC clip+screen defence** mitigated magnitude-based attacks and a
+  boosted backdoor (ASR 0.017) without rejecting honest IID clients. It
+  mitigated label flipping and an adaptive at-the-bound backdoor only partly
+  (ASR up to 0.35).
+* **MTD** removed schedule predictability but is not a poisoning defence.
+* **Cost.** A secure round with the defence costs 3.7× a FedAvg round at 2,202
+  parameters.
 
-Enable it with a `defences.robust_aggregation` section in a configuration:
+The historical learning rate of 0.1 caused non-finite local weights in the
+five-client CIFAR-10 setup. Use `configs/benchmark_lr001/` for the stabilized
+benchmark; `hybrid_verified.yaml` is the hybrid configuration.
 
-```yaml
-defences:
-  robust_aggregation:
-    enabled: true
-    max_malicious: 2
-    residual_z_threshold: 3.5
-    min_cosine_similarity: 0.0
-    max_norm_ratio: 5.0
-    min_survivors: 3
-    history_decay: 0.8
-    min_history_rounds: 2
-    history_cosine_threshold: -0.25
-```
+## Output safety and robust aggregation
 
-### Tuned detector validation (held-out seeds)
+Experiment result filenames are restricted to one file component within the
+configured output directory; traversal paths and symbolic-link output targets
+are rejected. CSV exports neutralize formula-like text cells (`=`, `+`, `-`,
+or `@`) while preserving numeric values.
 
-The original screening thresholds (`residual_z_threshold: 3.5`,
-`min_cosine_similarity: 0.0`) detected all simulated sign-flip updates in
-the initial five-seed experiment, but the clean-data control exposed 4 false
-positives among 75 benign client-round updates (seeds 42-46). This motivated
-a candidate threshold adjustment; it is not evidence that the original
-thresholds generalize without false positives.
-
-The tuned configurations use:
-
-```yaml
-robust_aggregation:
-  enabled: true
-  max_malicious: 2
-  residual_z_threshold: 20.0
-  min_cosine_similarity: 0.1
-  max_norm_ratio: 5.0
-  min_survivors: 3
-  history_decay: 0.8
-  min_history_rounds: 2
-  history_cosine_threshold: -0.25
-```
-
-These settings were evaluated on a separate seed set (47-51):
-
-- **Clean-data control:** 0 false positives among 75 benign updates; all 75
-  updates were accepted. Final accuracy and loss matched the FedAvg control
-  in each of the five paired seeds (mean final accuracy 63.896%).
-- **Sign-flip poisoning:** 30 true positives, 0 false positives and 0 false
-  negatives across 15 rounds (five clients per round, two simulated attackers
-  per round). Observed precision and recall were both 100%; no fallback
-  aggregation was used.
-- **Model performance under sign-flip poisoning:** mean final accuracy was
-  62.850% with screening versus 46.362% for FedAvg, a paired improvement of
-  16.488 percentage points. Mean paired final-loss difference (screened minus
-  FedAvg) was -0.75540.
-
-Reproduction configurations are:
-- `fedavg_no_attack.yaml` and `robust_no_attack.yaml`: clean-data controls
-  with the original screening thresholds.
-- `robust_no_attack_tuned.yaml`: tuned clean-data control.
-- `baseline_sign_flip.yaml` and `robust_sign_flip.yaml`: original
-  sign-flip comparison.
-- `robust_sign_flip_tuned.yaml`: tuned sign-flip detector.
-
-These are controlled simulation results on IID CIFAR-10 with five clients,
-full participation, three rounds, and a 40% sign-flip attacker fraction.
-The thresholds were calibrated after inspecting earlier runs (seeds 42-46)
-and evaluated on seeds 47-51. The results therefore provide a held-out
-seed check within the same setup, not a broad generalization guarantee.
-They do not establish performance for non-IID clients, other poisoning
-strategies, different attacker proportions, or real deployments. The
-detection labels are available from simulator ground truth; they would not
-be available in an ordinary deployment.
-
-**Important security boundary:** this screening currently requires individual
-plaintext model updates at the Flower coordinator. It is therefore explicitly
-incompatible with the current additive sum-only SMPC backend; the runner
-rejects configurations that enable both. This is deliberate. Ordinary
-additive sharing supports sums, not secure pairwise distances, medians, or
-comparisons. The robust detector is a heuristic and is not a formal Byzantine
-guarantee. It can flag benign non-IID updates and may miss coordinated or
-adaptive poisoning. The next research step is to implement robust scoring and
-selection inside a malicious-secure MPC protocol, or to introduce a separately
-trusted and independently administered validation boundary with an explicit
-trust assumption.
+The optional plaintext robust-update module scores client updates using
+distance from the cohort median, cosine alignment, update norm, and temporal
+consistency. It is a research integrity layer, not a poisoning guarantee, and
+is unavailable with SPDZ2k. Differential privacy, membership inference,
+property inference, and gradient inversion are outside the current evaluation.

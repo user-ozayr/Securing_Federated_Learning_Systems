@@ -1,30 +1,46 @@
-# Virtual Environments
+# Python environments and generated files
 venv/
 env/
 .venv/
-
-# Python Cache & Testing
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 .tox/
 .coverage
+*.egg-info/
+build/
+dist/
 
-# Local Datasets
+# Local datasets and generated experiment outputs
 data/
-
-# Experimental Results, CSVs, and Plots
 results/
-experiments/
-*.csv
-*.png
-*.jpg
+/experiments/
 
-# OS and IDE Specific Files
+# Keep selected research evidence, including CSV metrics
+!research_output/
+!research_output/**/*.csv
+
+# Secrets, credentials and local deployment material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# IDE and operating system files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Binary instrumentation archives of the completion evaluation (about 115 MB) stay
+# on the host; each file is hashed in research_output/completion/final_validation_manifest.json
+research_output/completion/**/*.npz

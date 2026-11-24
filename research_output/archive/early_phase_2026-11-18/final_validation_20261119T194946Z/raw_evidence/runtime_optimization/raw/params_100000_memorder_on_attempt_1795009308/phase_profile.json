@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "parameter_count": 100000,
+  "clients": 3,
+  "parties": 3,
+  "memory_order_flag": "on",
+  "max_abs_error": 0.0,
+  "sample_counts": [
+    1,
+    2,
+    3
+  ],
+  "input_count": 100001,
+  "phases": {
+    "start_round_control_compile_party_launch_seconds": 25.332039307337254,
+    "client_encode_seconds_sum": 0.04341644421219826,
+    "client_submit_wall_seconds_sum": 142.88794593838975,
+    "client_transfer_and_helper_overhead_seconds_sum": 142.84452949417755,
+    "client_wire_bytes_per_client_all_parties": 2408448,
+    "post_input_status_check_seconds": 0.005488434806466103,
+    "aggregate_output_receive_seconds": 71.31479815300554,
+    "party_completion_cleanup_seconds": 0.011546230409294367
+  },
+  "mpc_api_elapsed_seconds": 239.56043605832383
+}

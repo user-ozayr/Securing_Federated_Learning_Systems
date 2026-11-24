@@ -1,0 +1,31 @@
+{
+  "run_id": "e1__smpc_only__sign_flip__s101",
+  "study": "e1",
+  "condition": "smpc_only",
+  "attack": "sign_flip",
+  "seed": 101,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "633ef123d3c3afb3e2065defae6fd1ae2e50becc91ee439fb38b03cf12ea29eb",
+  "git_commit": "68f8970cf80fc23fe1acff48d9f1d8caecd4bb5a",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_only__sign_flip__s101.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T01:06:24Z",
+  "load_average_start": [
+    2.181640625,
+    2.15185546875,
+    2.455078125
+  ],
+  "status": "failed",
+  "detail": "exit code 1",
+  "wall_seconds": 189.497,
+  "finished_utc": "2026-11-20T01:09:34Z",
+  "load_average_end": [
+    1.9638671875,
+    2.1845703125,
+    2.41455078125
+  ]
+}

@@ -1,0 +1,69 @@
+from Compiler.types import Array, regint, sint
+from Compiler.library import for_range
+
+program.active = True
+selected_ids = [int(value) for value in program.args[1].split(",")]
+expected_counts = [int(value) for value in program.args[2].split(",")]
+input_count = int(program.args[3])
+output_client_id = int(program.args[4])
+client_port_base = int(program.args[5])
+max_client_id = max(selected_ids + [output_client_id])
+
+if (
+    not selected_ids
+    or len(expected_counts) != len(selected_ids)
+    or any(count <= 0 for count in expected_counts)
+    or input_count <= 0
+    or output_client_id in selected_ids
+):
+    raise ValueError("invalid secure aggregation program arguments")
+
+listen_for_clients(client_port_base)
+totals = Array(input_count, sint)
+totals.assign_all(0)
+seen = Array(max_client_id + 1, regint)
+seen.assign_all(0)
+
+for _ in range(len(selected_ids)):
+    client_id = accept_client_connection(client_port_base)
+    @if_(client_id < 0)
+    def _():
+        crash()
+    @if_(client_id > max_client_id)
+    def _():
+        crash()
+
+    is_selected = regint(0)
+    for selected_id in selected_ids:
+        is_selected += client_id == selected_id
+    @if_(is_selected != 1)
+    def _():
+        crash()
+    @if_(seen[client_id] != 0)
+    def _():
+        crash()
+    seen[client_id] = 1
+
+    inputs = Array.create_from(sint.receive_from_client(input_count, client_id))
+    expected_count = regint(0)
+    for index, selected_id in enumerate(selected_ids):
+        expected_count += (client_id == selected_id) * expected_counts[index]
+    # Reveal only the validity bit to the aggregation parties; never reveal the count.
+    count_mismatch = (inputs[input_count - 1] != expected_count).reveal()
+    @if_(count_mismatch)
+    def _():
+        crash()
+    @for_range(input_count)
+    def _(index):
+        totals[index] += inputs[index]
+    closeclientconnection(client_id)
+
+output_socket = accept_client_connection(client_port_base)
+@if_(output_socket != output_client_id)
+def _():
+    crash()
+
+# Reveal the aggregate Array as one vector. Building a Python list of every
+# parameter expands compiler memory and bytecode linearly with model size.
+totals.reveal_to_clients([output_socket])
+closeclientconnection(output_socket)

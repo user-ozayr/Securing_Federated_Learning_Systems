@@ -1,8 +1,6 @@
 import unittest
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 from fl_security.federated.model import CIFAR10CNN
-from fl_security.federated.training import train_local
 from fl_security.attacks.sign_flip import apply_sign_flip
 from fl_security.attacks.label_flip import apply_label_flip
 

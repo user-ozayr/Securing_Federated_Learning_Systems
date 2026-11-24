@@ -1,0 +1,54 @@
+{
+  "run_id": "e1__smpc_only__sign_flip__s103",
+  "study": "e1",
+  "condition": "smpc_only",
+  "attack": "sign_flip",
+  "seed": 103,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "bd4050689df8471b9454acca6c27a97e241f68c8db0b810b532445dcb56a0ab4",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_only__sign_flip__s103.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T12:40:36Z",
+  "load_average_start": [
+    1.541015625,
+    1.9365234375,
+    1.865234375
+  ],
+  "status": "aborted",
+  "detail": "aborted after round 4: RuntimeError: SPDZ2k round aborted: no clients completed",
+  "wall_seconds": 229.201,
+  "finished_utc": "2026-11-20T12:44:26Z",
+  "load_average_end": [
+    1.58056640625,
+    1.8916015625,
+    1.86962890625
+  ],
+  "analysis": {
+    "final_accuracy": 0.1,
+    "final_loss": 3.255079636779607e+17,
+    "final_backdoor_asr": 0.0,
+    "mean_deviation_from_honest_relative": 1.1714248105676723,
+    "mean_malicious_share_effective": 0.5464890278848529,
+    "mean_malicious_share_submitted": 0.5464890278848529,
+    "mean_reference_max_abs_error": 0.003934898297302425,
+    "max_reference_max_abs_error": 0.015625,
+    "mean_reference_relative_error": 2.6707753402986715e-08,
+    "max_reference_relative_error": 2.72725750191423e-08
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 1.1714248105676723,
+    "mean_malicious_share_effective": 0.5464890278848529,
+    "mean_malicious_share_submitted": 0.5464890278848529,
+    "mean_reference_max_abs_error": 0.003934898297302425,
+    "max_reference_max_abs_error": 0.015625,
+    "mean_reference_relative_error": 2.6707753402986715e-08,
+    "max_reference_relative_error": 2.72725750191423e-08,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}
