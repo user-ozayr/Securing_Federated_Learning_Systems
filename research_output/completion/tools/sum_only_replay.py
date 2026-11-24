@@ -1,28 +1,27 @@
-"""Diagnostic plaintext replay with the arithmetic of the sum-only SPDZ2k path.
+"""Replay FedAvg in plaintext using the sum-only SPDZ2k arithmetic.
 
-THIS IS NOT A SECURE-AGGREGATION RUN. SMPC stays disabled and no MPC party is
-started. In this process only, the strategy's plaintext FedAvg
-(``flower_simulation.weighted_fedavg``) is replaced by a plaintext emulation of
-what the sum-only SPDZ2k path computes:
+This is a diagnostic replay, not a secure aggregation run. SMPC stays disabled,
+and the script starts no MPC parties. In this process, it temporarily replaces
+Flower's plaintext weighted_fedavg with an emulation of the sum-only path:
 
-* each client state is encoded with the production encoder
-  (``mp_spdz._encode_weighted_model``: ``round(float64(w) * n * S)`` as int64,
-  including its ring-range guard);
-* the integer vectors are added exactly (the parties add in Z_2^64; the sum is
-  checked to stay inside the signed 64-bit range, so no wrap-around occurs);
-* the sum is decoded as in ``mp_spdz.receive_weighted_average``:
-  ``float64(sum) / S / N``, cast to the model dtype.
+* Each client state is encoded with the production encoder:
+  round(float64(w) * n * S) as int64, with the production ring-range guard.
+* The encoded vectors are added as integers. The parties add in Z_2^64; this
+  replay checks that the result remains within the signed 64-bit range.
+* The total is decoded as float64(sum) / S / N and cast to the model dtype,
+  matching mp_spdz.receive_weighted_average.
 
-Data, partition, seeds, cohort, local training and evaluation are the unchanged
-code path of the given plaintext configuration. The purpose is to test whether
-the sum-only SPDZ2k trajectories are reproduced by their plaintext arithmetic
-and how the result depends on the scale S.
+The data, partition, seeds, cohort, local training, and evaluation come from
+the supplied plaintext configuration. Only the aggregation arithmetic changes.
+The replay shows whether the sum-only trajectory matches its plaintext
+emulation and how the scale S affects the result.
 
-Usage (repository root, PYTHONPATH=src, same thread settings as the suite):
-  python research_output/completion/tools/sum_only_replay.py \
-      --config <config.yaml of a plaintext FedAvg run> --scale 1000000 \
-      --name <experiment name> --output-dir <new directory> \
-      [--compare label=<study>/<run_id> ...]
+Run from the repository root with PYTHONPATH=src and the suite's thread settings:
+
+    python research_output/completion/tools/sum_only_replay.py \
+        --config <config.yaml of a plaintext FedAvg run> --scale 1000000 \
+        --name <experiment name> --output-dir <new directory> \
+        [--compare label=<study>/<run_id> ...]
 """
 from __future__ import annotations
 
@@ -42,18 +41,18 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _git(*args: str) -> str:
+def _git_output(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True,
                           check=False).stdout.strip()
 
 
-def make_fixed_point_fedavg(scale: int, max_clients: int, calls: list):
+def make_fixed_point_fedavg(scale: int, max_clients: int, aggregation_call_sizes: list):
     from fl_security.smpc.fixed_point import FixedPointEncoder
     from fl_security.smpc.mp_spdz import _encode_weighted_model
 
     encoder = FixedPointEncoder(scale)
 
-    def fixed_point_fedavg(client_states, num_examples, global_state):
+    def emulate_fixed_point_fedavg(client_states, num_examples, global_state):
         if not client_states or len(client_states) != len(num_examples):
             raise ValueError("client_states and num_examples must be non-empty and aligned")
         summed, total = None, 0
@@ -78,10 +77,10 @@ def make_fixed_point_fedavg(scale: int, max_clients: int, calls: list):
             offset += count
         if offset != len(summed):
             raise RuntimeError("decoded length does not match the model schema")
-        calls.append(len(client_states))
+        aggregation_call_sizes.append(len(client_states))
         return result
 
-    return fixed_point_fedavg
+    return emulate_fixed_point_fedavg
 
 
 def main() -> None:
@@ -122,8 +121,8 @@ def main() -> None:
     config_text = yaml.safe_dump(config, sort_keys=True)
     (output_dir / "config.yaml").write_text(config_text, encoding="utf-8")
 
-    calls: list[int] = []
-    patched = make_fixed_point_fedavg(args.scale, int(config["federated_learning"]["num_clients"]), calls)
+    aggregation_call_sizes: list[int] = []
+    patched = make_fixed_point_fedavg(args.scale, int(config["federated_learning"]["num_clients"]), aggregation_call_sizes)
     simulation.weighted_fedavg = patched
     metadata = {
         "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
@@ -134,8 +133,8 @@ def main() -> None:
         "source_config_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "config_sha256": hashlib.sha256(config_text.encode("utf-8")).hexdigest(),
         "compare_with": dict(item.split("=", 1) for item in args.compare),
-        "git_commit": _git("rev-parse", "HEAD"),
-        "git_dirty_tracked": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "git_commit": _git_output("rev-parse", "HEAD"),
+        "git_dirty_tracked": bool(_git_output("status", "--porcelain", "--untracked-files=no")),
         "host": platform.node(), "python": sys.version.split()[0],
         "threads": {name: os.environ.get(name) for name in
                     ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS")},
@@ -151,9 +150,9 @@ def main() -> None:
         simulation.run_flower_simulation(config)
         if simulation.weighted_fedavg is not patched:
             raise RuntimeError("the aggregation patch was not in effect")
-        metadata["aggregations_replaced"] = len(calls)
-        if len(calls) != int(config["experiment"]["rounds"]):
-            raise RuntimeError(f"expected {config['experiment']['rounds']} replaced aggregations, got {len(calls)}")
+        metadata["aggregations_replaced"] = len(aggregation_call_sizes)
+        if len(aggregation_call_sizes) != int(config["experiment"]["rounds"]):
+            raise RuntimeError(f"expected {config['experiment']['rounds']} replaced aggregations, got {len(aggregation_call_sizes)}")
         metadata["analysis"] = analyze_run(output_dir, config)
         metadata["status"] = "completed"
     except BaseException as error:

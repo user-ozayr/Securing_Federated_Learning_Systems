@@ -65,7 +65,7 @@ class Watchdog:
         self.peak_rss = 0
         self.reason = None
         self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread = threading.Thread(target=self._monitor_resources, daemon=True)
         self.started = time.monotonic()
 
     def __enter__(self):
@@ -91,7 +91,7 @@ class Watchdog:
                 continue
         return total
 
-    def _run(self):
+    def _monitor_resources(self):
         while not self._stop.wait(0.25):
             self.peak_rss = max(self.peak_rss, self._party_rss())
             try:

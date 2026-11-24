@@ -19,7 +19,7 @@ BASE = {
         "dataset": "fashion_mnist",
         "model": "compact_cnn",
         "num_clients": 12,
-        "fraction_train": 0.34,  # 4 clients per round
+        "fraction_train": 0.34,  # Each round includes 4 clients.
         "local_epochs": 1,
         "batch_size": 32,
         "learning_rate": 0.05,
@@ -43,13 +43,13 @@ SMPC = {
     "num_aggregation_parties": 3,
     "min_clients_per_round": 2,
 }
-# Sum-only aggregation uses a power-of-two scale. With S = 10^6 the decoded
-# average rounds differently from float FedAvg at float32 ties, and SGD amplifies
-# those one-ulp differences (diagnostics/sum_only_divergence); with S = 2^40 the
-# same arithmetic reproduced FedAvg bit for bit. The encoder's ring guard
-# (2^62 / num_clients) then admits |w| < ~70 for 5,000 samples and 12 clients;
-# larger, diverged weights abort the round (fail-closed). The robust program has
-# its own scale 2^f and is unaffected.
+# Sum-only aggregation uses a power-of-two scale. At S = 10^6, float32 ties can
+# make its decoded average round differently from float FedAvg. SGD then amplifies
+# those one-ulp differences, as the divergence diagnostics show. With S = 2^40, the
+# tested arithmetic reproduced FedAvg bit for bit. The encoder ring guard
+# (2^62 / num_clients) admits |w| below about 70 for 5,000 samples and 12 clients.
+# Larger diverged weights abort the round. The robust program uses its own 2^f
+# scale, so this setting does not affect it.
 SMPC_SUM_ONLY = dict(SMPC, fixed_point_scale=1 << 40)
 
 # Static public clipping bound: above the steady-state honest update norm
@@ -163,7 +163,7 @@ E1_ATTACKS = ("none", "label_flip", "sign_flip", "scaled_replacement", "random_n
 
 
 def e1_core() -> list[RunSpec]:
-    """Required six-configuration comparison under six attack scenarios.
+    """Run six configurations against each of the six attack scenarios.
 
     Ordered seed-major so that every completed seed is a complete paired set.
     """
@@ -188,7 +188,7 @@ def e1_extended() -> list[RunSpec]:
 
 
 def e2_adaptive() -> list[RunSpec]:
-    """Adaptive (constrain-and-scale) backdoor attacker against each defence."""
+    """Compare each defence against the constrain-and-scale backdoor attack."""
     runs = []
     for seed_index, seed in enumerate(SEEDS):
         for index, condition in enumerate(["smpc_defence_mtd", "smpc_clip", "baseline",
@@ -199,8 +199,8 @@ def e2_adaptive() -> list[RunSpec]:
 
 
 def e3_mtd() -> list[RunSpec]:
-    """Schedule predictability: static, deterministic and secret schedules vs.
-    a predictive adversary that compromises the clients it expects to be selected."""
+    """Compare static, deterministic, and secret schedules against a predictive
+    adversary that targets the clients it expects to be selected."""
     runs = []
     schedules = {"static": "static", "deterministic": "deterministic", "secret": "secret"}
     for seed_index, seed in enumerate(SEEDS):
@@ -217,9 +217,9 @@ def e3_mtd() -> list[RunSpec]:
 
 
 def e4_sweeps() -> list[RunSpec]:
-    """Malicious proportion and attack strength sweeps (plaintext FedAvg and the
-    plaintext execution of the same defence algorithm that runs in SPDZ2k),
-    plus reference runs at the default setting for the SPDZ2k equivalence check."""
+    """Sweep malicious-client share and attack strength for plaintext FedAvg and
+    the plaintext version of the SPDZ2k defence, then add default-setting runs
+    for the SPDZ2k equivalence check."""
     runs = []
     for seed_index, seed in enumerate(SEEDS[:2]):
         runs.append(make_run("e4", "reference_defence", "backdoor", seed,

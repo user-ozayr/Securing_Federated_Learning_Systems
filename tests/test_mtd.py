@@ -4,7 +4,7 @@ from fl_security.mtd.controller import MTDController
 
 class TestMTD(unittest.TestCase):
     def test_client_selection_reproducibility(self):
-        """Verify that client selection is reproducible given the same seed."""
+        """Client selection returns the same cohort when the seed is unchanged."""
         num_clients = 10
         fraction = 0.5
         selected_1 = select_clients(num_clients, fraction, strategy='random', seed=42)
@@ -12,7 +12,7 @@ class TestMTD(unittest.TestCase):
         self.assertEqual(selected_1, selected_2)
 
     def test_controller_generation(self):
-        """Verify that MTD controller generates valid client-selection rounds."""
+        """The MTD controller produces valid client-selection rounds."""
         config = {
             "experiment": {"seed": 42},
             "mtd": {"enabled": True, "selection_strategy": "random"}

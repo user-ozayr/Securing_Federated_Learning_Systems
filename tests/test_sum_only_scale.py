@@ -1,4 +1,4 @@
-"""Sum-only SPDZ2k scale: a power of two so that secure and plaintext FedAvg agree."""
+"""Check that the power-of-two sum-only scale matches plaintext FedAvg where expected."""
 import pytest
 import torch
 
@@ -10,7 +10,7 @@ from fl_security.smpc.mp_spdz import _encode_weighted_model
 SCALE = 1 << 40
 
 
-def _secure_sum_only(states, counts, scale, max_clients=12):
+def _emulate_sum_only_aggregate(states, counts, scale, max_clients=12):
     """Integer arithmetic of the sum-only round: encode n*w, add, divide by S and N."""
     encoder = FixedPointEncoder(scale)
     total = None
@@ -27,12 +27,12 @@ def _secure_sum_only(states, counts, scale, max_clients=12):
     return result
 
 
-def _states(seed, clients=4, size=2202):
+def _make_client_states(seed, clients=4, size=2202):
     generator = torch.Generator().manual_seed(seed)
     states = []
     for _ in range(clients):
         w = torch.randn(size, generator=generator) * 0.3
-        # keep |w| >= 1e-4, the range in which n * w * 2^40 is an exact integer
+        # Keep |w| at or above 1e-4, where n * w * 2^40 is an exact integer.
         w = torch.where(w.abs() < 1e-4, torch.full_like(w, 1e-4), w).to(torch.float32)
         states.append({"w": w})
     return states
@@ -45,26 +45,26 @@ def test_sum_only_conditions_use_power_of_two_scale():
 
 
 def test_robust_conditions_keep_their_recorded_configuration():
-    # the robust program scales by 2^f; its recorded configs must stay byte-identical
+    # The robust program uses 2^f. Keep its recorded configuration unchanged.
     for name in ("smpc_clip", "smpc_defence_mtd"):
         assert CONFIGS[name][1]["smpc"]["fixed_point_scale"] == SMPC["fixed_point_scale"]
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])
 def test_power_of_two_scale_reproduces_fedavg_bitwise(seed):
-    states = _states(seed)
+    states = _make_client_states(seed)
     counts = [5000] * 4
     fedavg = weighted_fedavg(states, counts, {"w": torch.zeros(2202)})["w"]
-    secure = _secure_sum_only(states, counts, SCALE)["w"]
+    secure = _emulate_sum_only_aggregate(states, counts, SCALE)["w"]
     assert torch.equal(secure, fedavg)
 
 
 def test_decimal_scale_can_differ_from_fedavg():
     differs = 0
     for seed in range(1, 6):
-        states = _states(seed)
+        states = _make_client_states(seed)
         fedavg = weighted_fedavg(states, [5000] * 4, {"w": torch.zeros(2202)})["w"]
-        decimal = _secure_sum_only(states, [5000] * 4, 1_000_000)["w"]
+        decimal = _emulate_sum_only_aggregate(states, [5000] * 4, 1_000_000)["w"]
         assert torch.allclose(decimal, fedavg, atol=1e-6)
         differs += int((decimal != fedavg).sum())
     assert differs > 0

@@ -28,13 +28,11 @@ flagged (``instrumentation_consistent = 0``) and gets no metrics.
 from __future__ import annotations
 
 import json
-import math
 import shutil
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
 
 from fl_security.smpc.robust import (
     SecureDefenceConfig,
@@ -43,11 +41,11 @@ from fl_security.smpc.robust import (
 )
 
 
-def _norm(vector: np.ndarray) -> float:
+def _vector_norm(vector: np.ndarray) -> float:
     return float(np.linalg.norm(vector))
 
 
-def _defence(config: dict) -> SecureDefenceConfig | None:
+def _defence_config(config: dict) -> SecureDefenceConfig | None:
     smpc = config.get("smpc", {}) or {}
     raw = None
     if smpc.get("enabled") and (smpc.get("defence") or {}).get("enabled"):
@@ -58,7 +56,7 @@ def _defence(config: dict) -> SecureDefenceConfig | None:
     return SecureDefenceConfig.from_mapping(raw) if raw else None
 
 
-def _defended(config_obj: SecureDefenceConfig, ids, deltas, counts):
+def _compute_defence_reference(config_obj: SecureDefenceConfig, ids, deltas, counts):
     order = sorted(range(len(ids)), key=lambda i: ids[i])
     weights = config_obj.quantized_weights([int(counts[i]) for i in order])
     spec = config_obj.round_spec(weights)
@@ -130,12 +128,12 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
 
     rounds_data: dict[int, tuple[list, list, list, list]] = {}
     for path in sorted(instrumentation.glob("r*_c*.npz")):
-        data = np.load(path)
-        ids, deltas, flags, counts = rounds_data.setdefault(int(path.name[1:5]), ([], [], [], []))
-        ids.append(int(path.name.split("_c")[1][:4]))
-        deltas.append(data["delta"].astype(np.float64))
-        flags.append(bool(data["malicious"]))
-        counts.append(int(data["num_examples"]))
+        with np.load(path) as data:
+            ids, deltas, flags, counts = rounds_data.setdefault(int(path.name[1:5]), ([], [], [], []))
+            ids.append(int(path.name.split("_c")[1][:4]))
+            deltas.append(data["delta"].astype(np.float64))
+            flags.append(bool(data["malicious"]))
+            counts.append(int(data["num_examples"]))
     globals_ = {int(p.name[1:5]): np.load(p) for p in instrumentation.glob("r*_global.npy")}
     audit = _restrict_to_recorded_cohorts(rounds_data, _recorded_cohorts(frame))
     summary.update(_summarize_rows(run_dir, _round_rows(rounds_data, globals_, config, audit)))
@@ -143,9 +141,9 @@ def analyze_run(run_dir: Path, config: dict) -> dict:
     arrays = {}
     for path in sorted(instrumentation.iterdir()):
         if path.suffix == ".npz":
-            data = np.load(path)
-            for key in data.files:
-                arrays[f"{path.stem}__{key}"] = data[key]
+            with np.load(path) as data:
+                for key in data.files:
+                    arrays[f"{path.stem}__{key}"] = data[key]
         elif path.suffix == ".npy":
             arrays[path.stem] = np.load(path)
     np.savez_compressed(run_dir / "instrumentation.npz", **arrays)
@@ -202,7 +200,7 @@ def _summarize_rows(run_dir: Path, rows: list[dict]) -> dict:
 
 
 def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | None = None) -> list[dict]:
-    defence = _defence(config)
+    defence = _defence_config(config)
     smpc = config.get("smpc", {}) or {}
     sum_only = bool(smpc.get("enabled")) and defence is None
     rows = []
@@ -221,23 +219,30 @@ def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | N
         honest = [i for i, flag in enumerate(flags) if not flag]
         malicious = [i for i, flag in enumerate(flags) if flag]
         row = {"round": round_num, "participants": len(ids), "malicious": len(malicious),
-               "applied_update_norm": _norm(applied)}
+               "applied_update_norm": _vector_norm(applied)}
         all_fedavg = (weights[:, None] * stacked).sum(0) / weights.sum()
         if honest:
             honest_fedavg = (weights[honest, None] * stacked[honest]).sum(0) / weights[honest].sum()
-            reference_norm = max(_norm(honest_fedavg), 1e-12)
-            row["deviation_from_honest"] = _norm(applied - honest_fedavg)
+            reference_norm = max(_vector_norm(honest_fedavg), 1e-12)
+            row["deviation_from_honest"] = _vector_norm(applied - honest_fedavg)
             row["deviation_from_honest_relative"] = row["deviation_from_honest"] / reference_norm
             row["cosine_with_honest"] = float(
-                np.dot(applied, honest_fedavg) / max(_norm(applied) * reference_norm, 1e-12))
-        mass = lambda idx, coef: _norm(sum(coef[i] * stacked[i] for i in idx)) if idx else 0.0  # noqa: E731
+                np.dot(applied, honest_fedavg) / max(_vector_norm(applied) * reference_norm, 1e-12))
+        def weighted_update_norm(indices: list[int], coefficients: dict[int, float]) -> float:
+            if not indices:
+                return 0.0
+            weighted_update = sum(coefficients[index] * stacked[index] for index in indices)
+            return _vector_norm(weighted_update)
+
         submitted = {i: weights[i] for i in range(len(ids))}
-        m, h = mass(malicious, submitted), mass(honest, submitted)
+        m = weighted_update_norm(malicious, submitted)
+        h = weighted_update_norm(honest, submitted)
         row["malicious_share_submitted"] = m / (m + h) if (m + h) > 0 else 0.0
         if defence is not None:
-            recomputed, coefficient, decoded = _defended(defence, ids, stacked, counts)
+            recomputed, coefficient, decoded = _compute_defence_reference(defence, ids, stacked, counts)
             effective = {i: coefficient[ids[i]] for i in range(len(ids))}
-            m, h = mass(malicious, effective), mass(honest, effective)
+            m = weighted_update_norm(malicious, effective)
+            h = weighted_update_norm(honest, effective)
             row["malicious_share_effective"] = m / (m + h) if (m + h) > 0 else 0.0
             row["reference_output_check_passed"] = int(decoded.output_check_passed)
             reference = recomputed if recomputed is not None else np.zeros_like(applied)
@@ -248,7 +253,7 @@ def _round_rows(rounds_data: dict, globals_: dict, config: dict, audit: dict | N
             row["reference_max_abs_error"] = float(np.max(np.abs(applied - reference)))
             # float32 model arithmetic: the achievable absolute agreement scales
             # with the magnitude of the model parameters
-            row["reference_relative_error"] = _norm(applied - reference) / max(_norm(reference), 1e-12)
+            row["reference_relative_error"] = _vector_norm(applied - reference) / max(_vector_norm(reference), 1e-12)
             row["global_max_abs"] = float(np.max(np.abs(globals_[round_num])))
         row["reference_kind"] = (
             "robust_reference" if defence is not None else ("fedavg_fixed_point" if sum_only else "fedavg")
@@ -265,4 +270,3 @@ def load_instrumentation(path: Path) -> dict:
 
 
 __all__ = ["analyze_run", "load_instrumentation"]
-_ = (json, math, torch)

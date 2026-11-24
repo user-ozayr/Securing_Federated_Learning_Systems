@@ -1,38 +1,36 @@
-"""Diagnostic: why do the sum-only SPDZ2k runs diverge from plaintext FedAvg?
+"""Trace why sum-only SPDZ2k and plaintext FedAvg take different paths.
 
-Reads the packed instrumentation (``instrumentation.npz``) of the completion runs.
-For every recorded round it reconstructs the model states the clients submitted
-(global model of the previous round plus the recorded update; the reconstruction
-is checked to be exact in float32) and aggregates them twice:
+The script reads each run's packed instrumentation, rebuilds the submitted
+client models from the previous global model and each recorded update, and
+checks that the reconstruction is exact in float32. It then computes each
+round with both aggregation rules:
 
-* ``fixed_point`` - the arithmetic of the sum-only SPDZ2k path
-  (``mp_spdz._encode_weighted_model`` and ``mp_spdz.receive_weighted_average``):
-  per client ``round(float64(w) * n * S)`` as a 64-bit integer, the integer sum,
-  then ``sum / S / N`` in float64 and a cast to float32;
-* ``fedavg`` - the arithmetic of plaintext FedAvg (``aggregation.weighted_fedavg``):
-  float64 sum of ``float64(w) * n``, divided by ``N``, cast to float32.
+* Sum-only SPDZ2k: round float64(w) * n * S to int64, add the integers, divide
+  by S and N in float64, then cast to float32. This mirrors
+  mp_spdz._encode_weighted_model and mp_spdz.receive_weighted_average.
+* Plaintext FedAvg: sum float64(w) * n, divide by N, then cast to float32.
+  This mirrors aggregation.weighted_fedavg.
 
-Outputs in <output_dir>:
+The script writes these files under <output_dir>:
 
-* ``sum_only_round_exactness.csv`` - every round of every sum-only SPDZ2k run:
-  float32 coordinates in which the applied global model differs from the
-  ``fixed_point`` and from the ``fedavg`` aggregate of the same inputs;
-* ``fedavg_round_exactness.csv`` - the same for the plaintext FedAvg runs (checks
-  that the ``fedavg`` emulation reproduces them);
-* ``pair_divergence.csv`` - E1 pairs ``smpc_only`` / ``baseline`` (same attack and
-  seed, static cohort), round by round: whether cohort, inputs and previous global
-  model were identical, how far the two global models are apart, and the
-  difference of their metrics;
-* ``replay_comparison.csv`` - only if ``<output_dir>/replays`` exists: each
-  plaintext replay (``sum_only_replay.py``) against the run it is compared with;
-* ``robust_round_exactness.csv`` - for comparison, the same bit-level check for
-  the robust program (SPDZ2k and plaintext executions): the recorded model
-  against an exact plaintext replication of the round (``robust_reference``,
-  decoding, ``apply_delta``);
-* ``summary.txt`` - the aggregated findings.
+* sum_only_round_exactness.csv compares each applied global model with both
+  arithmetic results for every sum-only SPDZ2k round.
+* fedavg_round_exactness.csv checks that the FedAvg emulation reproduces every
+  recorded plaintext round.
+* pair_divergence.csv compares same-attack, same-seed E1 pairs
+  (smpc_only/baseline) with static cohorts. It records cohort, input, and
+  previous-model matches, model distance, and metric differences.
+* replay_comparison.csv compares plaintext replays from sum_only_replay.py
+  with their reference runs. The file is written when <output_dir>/replays
+  exists.
+* robust_round_exactness.csv applies the same bit-level check to robust SPDZ2k
+  and plaintext rounds, comparing each recorded model with an exact plaintext
+  replication using robust_reference, decoding, and apply_delta.
+* summary.txt contains the aggregate findings.
 
-Usage (repository root, PYTHONPATH=src for the robust check):
-  python sum_only_divergence.py <completion_root> <output_dir>
+Run from the repository root. Set PYTHONPATH=src to enable the robust check:
+
+    python sum_only_divergence.py <completion_root> <output_dir>
 """
 from __future__ import annotations
 
@@ -79,7 +77,7 @@ def recorded_cohort(frame: pd.DataFrame, round_num: int) -> list[int] | None:
     return [int(value) for value in json.loads(text)]
 
 
-def kind(config: dict) -> str:
+def classify_run(config: dict) -> str:
     smpc = config.get("smpc", {}) or {}
     defences = config.get("defences", {}) or {}
     if smpc.get("enabled"):
@@ -92,7 +90,7 @@ def kind(config: dict) -> str:
 
 
 # ---- arithmetic emulations ----------------------------------------------------------
-def client_states(previous: np.ndarray, entries: dict, cohort: list[int]):
+def rebuild_client_states(previous: np.ndarray, entries: dict, cohort: list[int]):
     states, counts, exact = [], [], True
     for client_id in cohort:
         delta, count, _ = entries[client_id]
@@ -104,26 +102,26 @@ def client_states(previous: np.ndarray, entries: dict, cohort: list[int]):
     return states, counts, exact
 
 
-def fixed_point(states, counts, scale: int):
-    """Sum-only SPDZ2k arithmetic: encode per client, add integers, decode."""
+def sum_only_fixed_point(states, counts, scale: int):
+    """Emulate sum-only SPDZ2k by encoding each client, adding, and decoding."""
     total = sum(counts)
     accumulator = np.zeros(states[0].shape, dtype=np.int64)
     peak = 0
     for state, count in zip(states, counts):
-        # _encode_weighted_model: tensor.to(float64) * n; FixedPointEncoder.encode: round(v * S)
+        # Production encoding converts to float64, multiplies by n, then rounds v * S.
         scaled = np.round(state.astype(np.float64) * count * scale)
         if np.any(np.abs(scaled) >= 2.0 ** 63):
             raise OverflowError("fixed-point value exceeds int64 range")
         encoded = scaled.astype(np.int64)
         peak = max(peak, int(np.abs(encoded).max()))
         accumulator += encoded
-    # receive_weighted_average: float64(sum) / S / N, cast to the model dtype
+    # Production decoding divides the float64 sum by S and N, then casts to the model dtype.
     value = accumulator.astype(np.float64) / scale / total
     return value.astype(np.float32), value, peak
 
 
-def fedavg(states, counts, order=None):
-    """aggregation.weighted_fedavg: float64 sum of w * n in result order, / N, float32."""
+def plaintext_fedavg(states, counts, order=None):
+    """Match aggregation.weighted_fedavg: sum float64(w) * n in order, divide by N, and cast to float32."""
     total = sum(counts)
     summed = np.zeros(states[0].shape, dtype=np.float64)
     for index in (order if order is not None else range(len(states))):
@@ -142,7 +140,7 @@ def ulp_distance(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def float32_ties(value: np.ndarray) -> np.ndarray:
-    """True where a float64 value lies exactly halfway between two float32 values."""
+    """Return a mask for float64 values halfway between two float32 values."""
     rounded = value.astype(np.float32)
     error = value - rounded.astype(np.float64)
     direction = np.where(error > 0, np.float32(np.inf), np.float32(-np.inf)).astype(np.float32)
@@ -173,13 +171,13 @@ def round_checks(run_dir: Path, run_kind: str) -> list[dict]:
         if cohort is None or any(client_id not in entries[round_num] for client_id in cohort):
             rows.append({"run_id": run_dir.name, "round": round_num, "note": "cohort entries missing"})
             continue
-        states, counts, exact = client_states(globals_[round_num - 1], entries[round_num], cohort)
+        states, counts, exact = rebuild_client_states(globals_[round_num - 1], entries[round_num], cohort)
         applied = globals_[round_num].astype(np.float32)
-        fa32, fa64 = fedavg(states, counts)
+        fa32, fa64 = plaintext_fedavg(states, counts)
         try:
-            fp32, fp64, peak = fixed_point(states, counts, scale)
+            fp32, fp64, peak = sum_only_fixed_point(states, counts, scale)
         except OverflowError:
-            # only possible for diverged plaintext models: the sum-only encoder would refuse them
+            # This occurs only after a plaintext model diverges; the sum-only encoder rejects these values.
             rows.append({"run_id": run_dir.name, "kind": run_kind, "round": round_num,
                          "note": "inputs exceed the int64 fixed-point range"})
             continue
@@ -188,14 +186,14 @@ def round_checks(run_dir: Path, run_kind: str) -> list[dict]:
         if run_kind == "fedavg" and (fa_ulps > 0).any():
             best = None
             for order in itertools.permutations(range(len(states))):
-                candidate, _ = fedavg(states, counts, order)
+                candidate, _ = plaintext_fedavg(states, counts, order)
                 mismatches = int((ulp_distance(applied, candidate) > 0).sum())
                 if best is None or mismatches < best[0]:
                     best = (mismatches, order)
                 if mismatches == 0:
                     break
             order_note = f"best of {len(states)}! orders: {best[1]}"
-            fa32, _ = fedavg(states, counts, best[1])
+            fa32, _ = plaintext_fedavg(states, counts, best[1])
             fa_ulps = ulp_distance(applied, fa32)
         magnitude = np.abs(applied.astype(np.float64))
         fa_mask = fa_ulps > 0
@@ -230,7 +228,7 @@ def round_checks(run_dir: Path, run_kind: str) -> list[dict]:
 
 
 def robust_checks(run_dir: Path, run_kind: str) -> list[dict]:
-    """Robust program: recorded model vs exact plaintext replication of the round.
+    """Compare recorded robust-program models with an exact plaintext replay of each round.
 
     Replication: robust_reference on the encoded recorded updates, decoding, and
     apply_delta (float64(previous) + delta, cast to float32), as in the strategy.
@@ -293,7 +291,7 @@ def pair_rows(dir_a: Path, dir_b: Path, label_a: str, label_b: str, scale: int) 
             f"update_l2_{label_b}": float(np.linalg.norm(gb[round_num] - gb[round_num - 1])),
         }
         if inputs_equal and previous_equal:
-            states, counts, _ = client_states(ga[round_num - 1], ea[round_num], cohort_a)
+            states, counts, _ = rebuild_client_states(ga[round_num - 1], ea[round_num], cohort_a)
             fp32, _, _ = fixed_point(states, counts, scale)
             fa32, _ = fedavg(states, counts)
             row[f"{label_a}_equals_fixed_point"] = bool((ulp_distance(a32, fp32) == 0).all())
@@ -354,7 +352,7 @@ def main() -> None:
         if json.loads(metadata_path.read_text(encoding="utf-8")).get("status") not in ("completed", "aborted"):
             continue
         config = yaml.safe_load((run_dir / "config.yaml").read_text(encoding="utf-8"))
-        run_kind = kind(config)
+        run_kind = classify_run(config)
         if run_kind == "spdz2k_sum_only":
             sum_only += round_checks(run_dir, run_kind)
         elif run_kind == "fedavg" and run_dir.parent.name == "e1":

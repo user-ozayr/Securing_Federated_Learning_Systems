@@ -1,14 +1,13 @@
-"""End-to-end correctness of the applied aggregate, summarised over all runs.
+"""Summarize end-to-end checks of the applied aggregate across all runs.
 
-Every instrumented run has ``round_analysis.csv`` (written by the post-run
-analysis): per round, the update actually applied to the global model is
-compared with the reference recomputed in float64 from the updates the clients
-really submitted (FedAvg, fixed-point FedAvg, or the exact integer robust
-reference). This script groups those comparisons by aggregation path.
+Each instrumented run records a round_analysis.csv file. For every round, the
+analysis recomputes the expected aggregate in float64 from the updates clients
+submitted, using FedAvg, fixed-point FedAvg, or the exact integer robust
+reference. This script groups the comparisons by aggregation path.
 
 Usage: python e2e_reference_summary.py <experiments_root>
-Writes <experiments_root>/summaries/end_to_end_reference_check.csv (one row per
-run) and prints the per-path table.
+Writes <experiments_root>/summaries/end_to_end_reference_check.csv, with one
+row per run, and prints a table for each path.
 """
 from __future__ import annotations
 
@@ -19,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-HEALTHY_MODEL_MAX_ABS = 100.0   # larger parameters only occur in diverged models
+HEALTHY_MODEL_MAX_ABS = 100.0   # Parameter magnitudes above 100 indicate a diverged model.
 
 
 def path_label(smpc: bool, kind: str) -> str:

@@ -10,14 +10,15 @@ def load_config(config_path: str) -> dict:
     validate_config(config)
     return config
 
-def validate_config(config: dict):
+def validate_config(config: dict) -> None:
     if not isinstance(config, dict):
         raise ValueError("configuration root must be a mapping")
     for section in ("experiment", "federated_learning"):
         if section not in config or not isinstance(config[section], dict):
             raise ValueError(f"missing or invalid {section!r} section")
     experiment, fl = config["experiment"], config["federated_learning"]
-    if isinstance(experiment.get("rounds"), bool) or not isinstance(experiment.get("rounds"), int) or experiment["rounds"] <= 0:
+    rounds = experiment.get("rounds")
+    if isinstance(rounds, bool) or not isinstance(rounds, int) or rounds <= 0:
         raise ValueError("experiment.rounds must be a positive integer")
     clients = fl.get("num_clients")
     if isinstance(clients, bool) or not isinstance(clients, int) or clients < 2:

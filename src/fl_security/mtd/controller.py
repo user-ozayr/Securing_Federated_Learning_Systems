@@ -90,11 +90,10 @@ class MTDController:
             num_clients, fraction, strategy=strategy, seed=round_seed, rng=rng
         )
 
-        if self.smpc_enabled:
-            if len(selected) < self.min_clients_per_round:
-                raise ValueError(
-                    f"SPDZ2k requires at least {self.min_clients_per_round} selected clients per round"
-                )
+        if self.smpc_enabled and len(selected) < self.min_clients_per_round:
+            raise ValueError(
+                f"SPDZ2k requires at least {self.min_clients_per_round} selected clients per round"
+            )
 
         return {
             "round": round_num,

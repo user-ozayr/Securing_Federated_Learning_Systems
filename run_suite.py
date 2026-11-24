@@ -1,10 +1,12 @@
-"""Run (or resume) the completion experiment suite.
+"""Run or resume the completion experiment suite.
+
+Example:
 
     FL_MPSPDZ_HOME=/path/to/MP-SPDZ-v0.4.3 python run_suite.py \
         --output-root research_output/completion/experiments --studies e1 e3 e2
 
-Completed runs are skipped on restart. See fl_security.experiments.grid for the
-exact configurations, attacks and seeds.
+Completed runs are skipped when the suite resumes. See
+fl_security.experiments.grid for the configurations, attacks, and seeds.
 """
 from __future__ import annotations
 

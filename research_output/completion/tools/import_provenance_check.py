@@ -1,14 +1,13 @@
-"""Import provenance check for a tree under test.
+"""Check that imports resolve to the intended checkout.
 
-The shared interpreter (.venv311) carries an editable install of the other
-worktree (``/home/ubuntu/gemini/fl-security-research/src``), and ``fl_security``
-and most of its subpackages are PEP 420 namespace packages. A module that is
-missing from the tree under test would therefore resolve silently to the other
-tree. This check shows that
+The shared .venv311 interpreter has an editable install of another worktree at
+/home/ubuntu/gemini/fl-security-research/src. Because fl_security and most of
+its subpackages are PEP 420 namespace packages, a missing module in the checkout
+under test could resolve silently to that other tree.
 
-1. every module of the tree under test resolves to that tree (PYTHONPATH first);
-2. no module that exists only in the other tree is referenced by the tree under
-   test, so nothing can fall through to it.
+This check confirms that every module present in the test checkout resolves
+there first through PYTHONPATH. It also checks that the checkout does not
+reference modules found only in the other tree.
 
 Usage: PYTHONPATH=<tree>/src python import_provenance_check.py <tree> <other_src>
 """
@@ -49,7 +48,7 @@ def main() -> int:
     for name in sorted(own):
         try:
             module = importlib.import_module(name)
-        except Exception as exc:  # reported, never hidden
+        except Exception as exc:  # Report the import error and continue checking the remaining modules.
             print(f"IMPORT-ERROR {name}: {type(exc).__name__}: {exc}")
             bad += 1
             continue
