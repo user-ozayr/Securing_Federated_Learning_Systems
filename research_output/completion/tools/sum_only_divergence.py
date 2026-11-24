@@ -233,10 +233,10 @@ def robust_checks(run_dir: Path, run_kind: str) -> list[dict]:
     Replication: robust_reference on the encoded recorded updates, decoding, and
     apply_delta (float64(previous) + delta, cast to float32), as in the strategy.
     """
-    from fl_security.experiments.analysis import _defence, _defended
+    from fl_security.experiments.analysis import _compute_defence_reference, _defence_config
 
     globals_, entries, frame, config = load_run(run_dir)
-    defence = _defence(config)
+    defence = _defence_config(config)
     rows = []
     for round_num in sorted(entries):
         if round_num not in globals_ or round_num - 1 not in globals_:
@@ -248,7 +248,7 @@ def robust_checks(run_dir: Path, run_kind: str) -> list[dict]:
             continue
         deltas = np.stack([entries[round_num][client_id][0] for client_id in cohort])
         counts = [entries[round_num][client_id][1] for client_id in cohort]
-        applied_delta, _, _ = _defended(defence, list(cohort), deltas, counts)
+        applied_delta, _, _ = _compute_defence_reference(defence, list(cohort), deltas, counts)
         previous = globals_[round_num - 1]
         expected = (previous + applied_delta if applied_delta is not None else previous).astype(np.float32)
         ulps = ulp_distance(globals_[round_num].astype(np.float32), expected)
@@ -292,8 +292,8 @@ def pair_rows(dir_a: Path, dir_b: Path, label_a: str, label_b: str, scale: int) 
         }
         if inputs_equal and previous_equal:
             states, counts, _ = rebuild_client_states(ga[round_num - 1], ea[round_num], cohort_a)
-            fp32, _, _ = fixed_point(states, counts, scale)
-            fa32, _ = fedavg(states, counts)
+            fp32, _, _ = sum_only_fixed_point(states, counts, scale)
+            fa32, _ = plaintext_fedavg(states, counts)
             row[f"{label_a}_equals_fixed_point"] = bool((ulp_distance(a32, fp32) == 0).all())
             row[f"{label_b}_equals_fedavg"] = bool((ulp_distance(b32, fa32) == 0).all())
         for metric in ("global_accuracy", "global_loss", "backdoor_asr"):
