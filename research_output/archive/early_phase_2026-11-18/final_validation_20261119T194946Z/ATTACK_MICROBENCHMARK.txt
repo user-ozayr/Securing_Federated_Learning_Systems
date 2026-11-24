@@ -1,0 +1,26 @@
+[
+  {
+    "case": "sign_flip",
+    "malicious_clients": "[0, 3]",
+    "rounds": "[{\"round\": 1, \"aggregate\": [0.20000000298023224, 0.10000000149011612], \"clean_reference\": [1.0, 0.5], \"aggregate_deviation_l2\": 0.8944272398948669, \"malicious_ids\": [0, 3]}, {\"round\": 2, \"aggregate\": [0.20000000298023224, 0.10000000149011612], \"clean_reference\": [1.0, 0.5], \"aggregate_deviation_l2\": 0.8944272398948669, \"malicious_ids\": [0, 3]}]",
+    "observed": "synthetic weighted-average parameter vector; no training/accuracy metric"
+  },
+  {
+    "case": "random_noise",
+    "malicious_clients": "[0, 3]",
+    "rounds": "[{\"round\": 1, \"aggregate\": [1.047873854637146, 0.44218558073043823], \"clean_reference\": [1.0, 0.5], \"aggregate_deviation_l2\": 0.07506272941827774, \"malicious_ids\": [0, 3]}, {\"round\": 2, \"aggregate\": [1.0354193449020386, 0.3185946047306061], \"clean_reference\": [1.0, 0.5], \"aggregate_deviation_l2\": 0.18483085930347443, \"malicious_ids\": [0, 3]}]",
+    "observed": "synthetic weighted-average parameter vector; no training/accuracy metric"
+  },
+  {
+    "case": "label_flip_transform",
+    "malicious_clients": "n/a",
+    "rounds": "{\"input\": [0, 1, 2, 9], \"output\": [1, 2, 3, 0]}",
+    "observed": "transform-only; no model training"
+  },
+  {
+    "case": "standalone_robust_filter_sign_flip",
+    "malicious_clients": "[3,4]",
+    "rounds": "{\"detected\": [3, 4], \"accepted\": [0, 1, 2], \"aggregate\": [1.0, 2.0], \"fallback\": false}",
+    "observed": "synthetic detector check only; ordinary plaintext path, not MPC"
+  }
+]

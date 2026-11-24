@@ -1,0 +1,8 @@
+{
+  "error_type": "RuntimeError",
+  "error": "Simulation crashed.",
+  "cause_type": "RuntimeError",
+  "cause": "SPDZ2k round aborted: no clients completed",
+  "rounds_completed": 1,
+  "rounds_configured": 10
+}

@@ -1,4 +1,4 @@
-﻿# MPC Bounded-Contribution Defense: feasibility assessment
+# MPC Bounded-Contribution Defense: feasibility assessment
 
 ## Status
 

@@ -1,0 +1,29 @@
+{
+  "status": "ABORTED",
+  "detail": "300-second benchmark cap",
+  "total_seconds": 301.46122377412394,
+  "samples": [
+    {
+      "party_id": 0,
+      "peak_rss": 407293952,
+      "cpu_ticks": 22948,
+      "read_bytes": 0,
+      "write_bytes": 0
+    },
+    {
+      "party_id": 1,
+      "peak_rss": 402956288,
+      "cpu_ticks": 23041,
+      "read_bytes": 0,
+      "write_bytes": 0
+    },
+    {
+      "party_id": 2,
+      "peak_rss": 406380544,
+      "cpu_ticks": 22627,
+      "read_bytes": 0,
+      "write_bytes": 0
+    }
+  ],
+  "error": ""
+}

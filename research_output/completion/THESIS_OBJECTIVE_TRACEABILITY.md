@@ -126,7 +126,9 @@ otherwise.
   is bit-exact against the exact reference in 13 adversarial scenarios and 21
   benchmark rounds. End-to-end error inside FL is ≤ 2.4·10⁻⁷ over 700 robust
   rounds, and trajectories are identical to the plaintext execution of the same
-  algorithm.
+  algorithm. With the power-of-two fixed-point scale (S = 2⁴⁰), sum-only
+  SPDZ2k is trajectory-identical to plaintext FedAvg in all 18 `smpc_only`
+  runs (`FINAL_VALIDATION_REPORT.md` §4, `experiments_pow2/`).
 * *Overhead:* 3.5–3.7× FedAvg's round time at 2,202 parameters, and about
   5.9 ms and 1.26 MB per parameter for the robust round (B). The limit is about
   100,000 parameters per round under the default 600 s round timeout.

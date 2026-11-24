@@ -1,0 +1,6 @@
+Command: PYTHONPATH=src /home/ubuntu/gemini/fl-security-research/.venv311/bin/python research_output/final_validation_20261119T194946Z/run_integrated_mtd_attack_tiny_logged.py
+Working directory: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis
+Exit code: 0
+Flower reported elapsed time: 34.41 seconds for two rounds
+Result: completed, three local parties, two selected clients per round, one selected malicious client per round, MTD cohorts changed. Test accuracy 0.75 across initial and two rounds; no baseline or attack-success rate.
+Raw transcript: INTEGRATED_TINY_MTD_ATTACK.log

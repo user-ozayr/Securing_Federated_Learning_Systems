@@ -1,0 +1,8 @@
+{
+  "error_type": "RuntimeError",
+  "error": "Simulation crashed.",
+  "cause_type": "RuntimeError",
+  "cause": "SPDZ2k round aborted because one or more Flower clients failed",
+  "rounds_completed": 1,
+  "rounds_configured": 10
+}

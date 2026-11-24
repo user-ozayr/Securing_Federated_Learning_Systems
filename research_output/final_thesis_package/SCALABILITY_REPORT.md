@@ -3,7 +3,7 @@
 Date: 2026-11-18. Isolated branch research/spdz2k-thesis. Original main untouched; no commit/push.
 
 ## Decision
-**B ? core MPC works, full-model execution needs optimization.** The exact production circuit compiles at full model shape under the stated caps, but one guarded direct three-party full-shape run failed to complete within 300 seconds. The 3-client/3-party Flower integration passed only with an 8-parameter synthetic model.
+**B. Core MPC works, but full-model execution still needs optimization.** The exact production circuit compiles at full model shape under the stated caps, but one guarded direct three-party full-shape run failed to complete within 300 seconds. The 3-client/3-party Flower integration passed only with an 8-parameter synthetic model.
 
 ## Production-source compile evidence
 The exact checked-in circuit source (SHA-256 1e26719b74fb35cb8c0aff5a2a12a23e21ad1d760a08070a91a8209e2e6ef333) was compiled by MP-SPDZ v0.4.3 with -R 64. Every run completed below 2s and 63MiB, within 6GiB/120s limits.
@@ -26,4 +26,4 @@ For 2,122,187 float parameters plus count, padded input length is 2,122,752. Wit
 ## Tiny integration and suite
 The prior actual Flower path passed with 3 clients, 3 local parties, an 8-parameter model and one round: 16.32s total, 0.807s aggregation, 73,728-byte metric, zero fit failures. Full suite: 70 passed, two dependency deprecation warnings. This does not prove full-model Flower operation.
 
-MP-SPDZ emitted ?Order of memory instructions not preserved, errors possible? in compiler logs. Investigate before relying on the full-shape circuit. Only one host was available; cross-host remains unvalidated.
+MP-SPDZ compiler logs include the warning ?Order of memory instructions not preserved, errors possible.? Investigate it before relying on the full-shape circuit. Validation used one host, so cross-host behavior remains untested.
