@@ -1,0 +1,42 @@
+{
+  "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
+  "aggregation": "weighted_fedavg replaced in-process by round(float64(w)*n*S) per client, exact integer sum, float64(sum)/S/N cast to float32",
+  "scale": 1000000,
+  "source_config": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1/e1__baseline__backdoor__s101/config.yaml",
+  "source_config_sha256": "c350357919747632b8478f99ad265dbbde0807e45b68cff706910ffe2aff9468",
+  "config_sha256": "fd650749293f287e538a86d6bb7c66e1c2e97360abeac7b70fae30d8b3c8cf53",
+  "compare_with": {
+    "spdz2k_sum_only": "e1/e1__smpc_only__backdoor__s101",
+    "fedavg": "e1/e1__baseline__backdoor__s101"
+  },
+  "git_commit": "ee645b2ffbc00b509be7587a627ae4cabc7be37b",
+  "git_dirty_tracked": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "pythonpath": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src",
+  "fl_security_module": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py",
+  "started_utc": "2026-11-20T21:33:53Z",
+  "status": "completed",
+  "aggregations_replaced": 10,
+  "analysis": {
+    "final_accuracy": 0.6799,
+    "final_loss": 1.037820937538147,
+    "final_backdoor_asr": 0.9351111111111111,
+    "mean_deviation_from_honest_relative": 1.0148994842919756,
+    "mean_malicious_share_effective": 0.587849843305832,
+    "mean_malicious_share_submitted": 0.587849843305832,
+    "mean_reference_max_abs_error": 1.0281801223754883e-07,
+    "max_reference_max_abs_error": 1.7881393432617188e-07,
+    "mean_reference_relative_error": 7.047499766992702e-08,
+    "max_reference_relative_error": 9.817467798229205e-08,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "wall_seconds": 96.155,
+  "finished_utc": "2026-11-20T21:35:29Z"
+}

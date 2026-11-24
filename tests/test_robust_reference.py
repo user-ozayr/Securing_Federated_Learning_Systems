@@ -76,9 +76,9 @@ def test_adaptive_threshold_uses_lower_median_and_clamps():
     rows = [_vector(n, 32, config.scale, rng) for n in (0.4, 0.5, 0.6, 10.0)]
     _, result, decoded = _run(config, rows)
     assert abs(decoded.threshold_norm - 0.5) < 1e-3
-    assert result.accepted == [1, 1, 1, 0]          # 10 > 2 * 0.5 rejected
-    assert result.clip_flags == [0, 0, 1, 0]        # 0.6 > 0.5 clipped
-    # clamp to max_norm when all honest norms are huge
+    assert result.accepted == [1, 1, 1, 0]          # The value 10 exceeds twice the 0.5 threshold, so it is rejected.
+    assert result.clip_flags == [0, 0, 1, 0]        # The value 0.6 is above the 0.5 threshold, so it is clipped.
+    # Clamp to max_norm when every honest update norm is large.
     rows = [_vector(n, 32, config.scale, rng) for n in (20.0, 21.0, 22.0, 23.0)]
     _, result, decoded = _run(config, rows)
     assert abs(decoded.threshold_norm - 4.0) < 1e-3
@@ -110,9 +110,9 @@ def test_out_of_range_and_negative_square_inputs_are_excluded():
     config = SecureDefenceConfig(mode="clip", threshold="static", static_norm=1.0)
     honest = [_vector(0.5, 16, config.scale, rng) for _ in range(3)]
     big = [0] * 16
-    big[0] = 1 << 27                       # ||x||^2 = 2^54 > r_max, no wrap
+    big[0] = 1 << 27                       # ||x||^2 = 2^54 > r_max, so no wrap occurs.
     negative = [0] * 16
-    negative[0] = 3 << 30                  # ||x||^2 = 2^63 + 2^60: negative mod 2^64
+    negative[0] = 3 << 30                  # ||x||^2 = 2^63 + 2^60, which is negative modulo 2^64.
     _, result, decoded = _run(config, honest + [big])
     assert result.accepted == [1, 1, 1, 0] and decoded.output_check_passed
     _, result, decoded = _run(config, honest + [negative])
@@ -124,7 +124,7 @@ def test_wraparound_input_passes_mpc_check_but_fails_output_check():
     config = SecureDefenceConfig(mode="clip", threshold="static", static_norm=1.0)
     honest = [_vector(0.5, 16, config.scale, rng) for _ in range(3)]
     wrap = _vector(0.2, 16, config.scale, rng)
-    wrap[0] = 1 << 32                      # squares to 0 modulo 2^64
+    wrap[0] = 1 << 32                      # This value squares to 0 modulo 2^64.
     _, result, decoded = _run(config, honest + [wrap])
     assert result.accepted == [1, 1, 1, 1]
     assert not decoded.output_check_passed

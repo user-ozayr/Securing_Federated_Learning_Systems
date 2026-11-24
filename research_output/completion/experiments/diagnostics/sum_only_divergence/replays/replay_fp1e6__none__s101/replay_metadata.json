@@ -1,0 +1,42 @@
+{
+  "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
+  "aggregation": "weighted_fedavg replaced in-process by round(float64(w)*n*S) per client, exact integer sum, float64(sum)/S/N cast to float32",
+  "scale": 1000000,
+  "source_config": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1/e1__baseline__none__s101/config.yaml",
+  "source_config_sha256": "50553bfd1851fbff2532e9de10b6bf83faef3578ce05ec2a27a0f2de791fb03b",
+  "config_sha256": "65a85e4ba6db8135012daf95d05cbca577437a31518152039e98b727a84bf343",
+  "compare_with": {
+    "spdz2k_sum_only": "e1/e1__smpc_only__none__s101",
+    "fedavg": "e1/e1__baseline__none__s101"
+  },
+  "git_commit": "ee645b2ffbc00b509be7587a627ae4cabc7be37b",
+  "git_dirty_tracked": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "pythonpath": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src",
+  "fl_security_module": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py",
+  "started_utc": "2026-11-20T21:32:02Z",
+  "status": "completed",
+  "aggregations_replaced": 10,
+  "analysis": {
+    "final_accuracy": 0.8186,
+    "final_loss": 0.49815584263801577,
+    "final_backdoor_asr": 0.012888888888888889,
+    "mean_deviation_from_honest_relative": 1.5992433849871225e-07,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 7.748603820800782e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.5992433849871225e-07,
+    "max_reference_relative_error": 2.4478972079207226e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "wall_seconds": 97.635,
+  "finished_utc": "2026-11-20T21:33:40Z"
+}
