@@ -369,43 +369,43 @@ def key_tables(final: pd.DataFrame) -> str:
 
     append_metric_table(
         "e1", "last3_mean_accuracy", core, attacks,
-        "E1 ? clean accuracy (mean of last 3 rounds)",
+        "E1 : clean accuracy (mean of last 3 rounds)",
     )
     append_metric_table(
         "e1", "final_backdoor_asr", core, ["none", "backdoor"],
-        "E1 ? backdoor ASR at the final round",
+        "E1 : backdoor ASR at the final round",
     )
     append_metric_table(
         "e1", "mean_malicious_share_effective", core, attacks[1:],
-        "E1 ? malicious share of the applied aggregate (after defence)",
+        "E1 : malicious share of the applied aggregate (after defence)",
     )
     append_metric_table(
         "e1", "mean_malicious_share_submitted", core, attacks[1:],
-        "E1 ? malicious share of the submitted updates (before defence)",
+        "E1 : malicious share of the submitted updates (before defence)",
     )
     append_metric_table(
         "e1", "rejection_tpr", ["smpc_defence_mtd"], attacks[1:],
-        "E1 ? rejection true-positive rate",
+        "E1 : rejection true-positive rate",
     )
     append_metric_table(
         "e1", "rejection_fpr", ["smpc_defence_mtd"], attacks,
-        "E1 ? rejection false-positive rate (honest)",
+        "E1 : rejection false-positive rate (honest)",
     )
     append_metric_table(
         "e1", "mean_deviation_from_honest_relative", core, attacks,
-        "E1 ? relative deviation of the applied update from honest-only FedAvg",
+        "E1 : relative deviation of the applied update from honest-only FedAvg",
     )
     append_metric_table(
         "e1", "mean_round_seconds", core, ["none"],
-        "E1 ? mean round wall time (s)", 1,
+        "E1 : mean round wall time (s)", 1,
     )
     append_metric_table(
         "e1", "mean_mpc_protocol_seconds_max", core, ["none"],
-        "E1 ? MP-SPDZ protocol time per round (s)", 1,
+        "E1 : MP-SPDZ protocol time per round (s)", 1,
     )
     append_metric_table(
         "e1", "mean_mpc_global_data_sent_mb", core, ["none"],
-        "E1 ? MP-SPDZ global traffic per round (MB)", 0,
+        "E1 : MP-SPDZ global traffic per round (MB)", 0,
     )
 
     extended = ["baseline", "plaintext_robust", "smpc_screen", "smpc_defence", "smpc_defence_mtd"]
@@ -416,25 +416,25 @@ def key_tables(final: pd.DataFrame) -> str:
     append_metric_table(
         "e1x", "last3_mean_accuracy", extended,
         ["none", "sign_flip", "scaled_replacement", "backdoor"],
-        "E1x ? clean accuracy, extended defences (baseline and full framework from E1)",
+        "E1x : clean accuracy, extended defences (baseline and full framework from E1)",
         frame=merged,
     )
     append_metric_table(
         "e1x", "final_backdoor_asr", extended, ["backdoor"],
-        "E1x ? backdoor ASR, extended defences",
+        "E1x : backdoor ASR, extended defences",
         frame=merged,
     )
     append_metric_table(
         "e2", "final_backdoor_asr",
         ["baseline", "plaintext_robust", "smpc_clip", "smpc_defence_mtd"],
         ["adaptive_backdoor"],
-        "E2 ? adaptive (constrain-and-scale) backdoor: ASR",
+        "E2 : adaptive (constrain-and-scale) backdoor: ASR",
     )
     append_metric_table(
         "e2", "last3_mean_accuracy",
         ["baseline", "plaintext_robust", "smpc_clip", "smpc_defence_mtd"],
         ["adaptive_backdoor"],
-        "E2 ? adaptive backdoor: clean accuracy",
+        "E2 : adaptive backdoor: clean accuracy",
     )
     e3 = final[final.study == "e3"]
     if not e3.empty:
