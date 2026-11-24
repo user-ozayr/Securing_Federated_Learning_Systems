@@ -1,6 +1,6 @@
 # Reverse validation
 
-Review date: 2026-11-18. Each property is traced from the claim back to implementation, test, and evidence. ?Pass? is limited to the tested scope; it is not a formal cryptographic proof.
+Review date: 2026-11-18. Each property is traced from the claim back to implementation, test, and evidence. “Pass” is limited to the tested scope; it is not a formal cryptographic proof.
 
 | Claimed property | Required implementation | Test or experiment | Evidence | Status |
 |---|---|---|---|---|
@@ -13,11 +13,11 @@ Review date: 2026-11-18. Each property is traced from the claim back to implemen
 | No insecure fallback | Exact backend check, plaintext parameter rejection, abort/cleanup on error; plaintext FedAvg only when SMPC disabled | `test_secure_config_rejects_unsupported_or_missing_backend`, Flower mismatch/omission tests, `test_round_start_failure_triggers_abort_and_cleanup` | Full suite passed; code path review confirms no additive/plaintext fallback when enabled | Pass (tested control paths; live malicious MAC failure was not injected) |
 | Replay and reused-round rejection | HMAC signature, timestamp window, unique request ID journal, round-ID journal | `test_party_control_authenticates_and_rejects_replayed_requests`, `test_control_request_replay_journal_survives_service_restart`, `test_party_service_rejects_reused_round_id` | HTTP unit tests and persistent journal tests passed | Pass (unit/service level) |
 
-## Check 1 ? Security claims
+## Check 1: Security claims
 
 The README, architecture, threat-model and security-limitations docs now state that contribution clipping is absent, robust individual-update screening is plaintext-only, MTD does not establish client honesty, and full-model/cross-host/attack-resistance claims are unvalidated. The party service launches MP-SPDZ with `-e`; local setup provisions SSL material, but the evidence is loopback-only. SPDZ2k is described under MP-SPDZ v0.4.3 malicious dishonest-majority assumptions with abort, not availability. A failed MAC has not been injected experimentally.
 
-## Check 2 ? Data flow
+## Check 2: Data flow
 
 1. Flower maps the registered proxy to a logical client and chooses a cohort before fit. The configured HMAC secret is held by the coordinator process; the secret value is not sent in `FitIns` or recorded in result CSVs. Selected client IDs and whether secret seeding was enabled are observable metadata.
 2. Selected clients receive the global model and train locally. Plaintext updates exist in the client process. Configured attacks perturb local training/update before secure encoding.
@@ -26,7 +26,7 @@ The README, architecture, threat-model and security-limitations docs now state t
 5. The designated output client receives weighted sum and total count, verifies expected count and padding, decodes the average, and Flower updates/broadcasts the global model. The coordinator still sees client IDs, participation/failure status, counts, current model and final aggregate. Repeated aggregates may permit inference.
 6. Experiment output records aggregate metrics and metadata, not individual update arrays or the MTD secret. Same-host process/kernel isolation is not provided.
 
-## Check 3 ? Failure validation
+## Check 3: Failure validation
 
 | Failure | Existing validation | Result / remaining limit |
 |---|---|---|
@@ -42,14 +42,14 @@ The README, architecture, threat-model and security-limitations docs now state t
 | Over-bound but in-ring contribution | No clipping/bound enforcement exists | Not implemented; client can submit arbitrary in-range values |
 | MPC MAC failure / malicious party / network partition | None | Not tested; protocol should abort, but no experiment proves this implementation path |
 
-## Check 4 ? Regression validation
+## Check 4: Regression validation
 
 Baseline before changes: 71 passed, 2 warnings. After the targeted test/documentation updates: **77 passed, 2 warnings** in 5.50 s; focused set 30 passed in 5.48 s. `compileall` and `git diff --check` pass. The original checkout remains on `main` at the same HEAD and retains its same eight pre-existing modified files.
 
-## Check 5 ? Reproducibility validation
+## Check 5: Reproducibility validation
 
 The reproducibility guide provides test, compile, wheel and profile-harness commands with pinned paths/versions. The preserved profile harness supports the tested synthetic direct sizes. The README primary command names `configs/benchmark_lr001/hybrid_verified.yaml`, but a full CIFAR Flower round has not been completed; therefore clean-environment reproduction of the primary full-model experiment is **not validated**. The direct performance profile uses three parties and scale 100,000, whereas that YAML requests four parties and scale 1,000,000.
 
-## Check 6 ? Documentation consistency
+## Check 6: Documentation consistency
 
 README and architecture docs now identify the same primary YAML and state that clipping is absent. Methodology distinguishes full-circuit compilation from full-protocol execution, identifies the existing benchmark runner, and records differing direct-profile settings. Historical configuration variants and output artifacts are retained. The README primary command is intended workflow, not a verified full-size success.

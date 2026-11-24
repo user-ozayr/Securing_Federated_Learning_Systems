@@ -1,16 +1,17 @@
-"""Resumable execution of the experiment grid.
+"""Run and resume the configured experiment grid.
 
-Each run is executed in a separate process group (``run_experiment.py``) with a
-timeout, so Ray and MP-SPDZ state cannot leak between runs. For secret-derived
-MTD schedules a fresh random FL_MTD_SECRET is generated per run; only its
-SHA-256 commitment is stored. Runs of a paired study (``tags["paired"]``)
-instead derive the secret from a suite pairing key and (study, seed), so all
-conditions of one seed see the same secret cohorts and secret direction subsets
-(common random numbers); the key stays on the host (``pairing_key``, mode 0600)
-and is unknown to the simulated adversary. Completed runs are skipped when the suite is
-restarted. Before an unfinished run is repeated, the files of the earlier
-attempt are moved to ``failed_attempts/<UTC stamp>_auto/`` so that the repeat
-starts from an empty directory.
+Each experiment runs in its own process group. If it times out, Ray and MP-SPDZ
+state are cleaned up before the next run. Unpaired MTD runs receive a fresh
+random FL_MTD_SECRET; the metadata stores only its SHA-256 commitment.
+
+Paired studies derive one secret for each (study, seed), so every condition in
+that pair sees the same secret cohorts and direction subsets. This common-random
+number setup uses a 32-byte suite key stored on the host as pairing_key with
+mode 0600. The simulated adversary never receives that key.
+
+Completed runs are skipped on restart. Before an unfinished run is retried,
+its files move to failed_attempts/<UTC stamp>_auto/ so the retry starts in an
+empty directory.
 """
 from __future__ import annotations
 
@@ -35,7 +36,7 @@ from fl_security.experiments.grid import RunSpec, all_runs
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _git(*args: str) -> str:
+def _git_output(*args: str) -> str:
     try:
         return subprocess.run(
             ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, timeout=30, check=False
@@ -160,8 +161,8 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int,
         "pairing_key_sha256": (hashlib.sha256(pairing_key).hexdigest()
                                if paired and pairing_key is not None else None),
         "config_sha256": hashlib.sha256(config_text.encode("utf-8")).hexdigest(),
-        "git_commit": _git("rev-parse", "HEAD"),
-        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "git_commit": _git_output("rev-parse", "HEAD"),
+        "git_dirty": bool(_git_output("status", "--porcelain", "--untracked-files=no")),
         "host": platform.node(), "python": sys.version.split()[0],
         "command": " ".join(command[1:]),
         "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

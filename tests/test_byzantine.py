@@ -1,6 +1,5 @@
 import unittest
 import torch
-import numpy as np
 from fl_security.attacks.byzantine import ByzantineAttacker
 
 class TestByzantineAttacker(unittest.TestCase):

@@ -33,7 +33,7 @@ from fl_security.mtd.exposure import (
 
 
 @contextmanager
-def _secret(value: str | None):
+def _temporary_mtd_secret(value: str | None):
     saved = os.environ.pop("FL_MTD_SECRET", None)
     if value is not None:
         os.environ["FL_MTD_SECRET"] = value
@@ -52,7 +52,7 @@ def run_exposure_study(num_clients: int = 12, fraction: float = 0.34, rounds: in
         for schedule_name in ("static", "deterministic", "secret"):
             config = {"experiment": {"seed": trial}, "mtd": {"schedule": schedule_name}}
             secret = secrets.token_urlsafe(48) if schedule_name == "secret" else None
-            with _secret(secret):
+            with _temporary_mtd_secret(secret):
                 actual = schedule(config, num_clients, rounds, fraction)
                 predicted = predicted_schedule(config, num_clients, rounds, fraction)
             for budget in budgets:

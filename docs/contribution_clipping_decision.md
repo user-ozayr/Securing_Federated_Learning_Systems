@@ -2,7 +2,7 @@
 
 # Contribution-clipping feasibility decision
 
-**Decision: Option C ? leave clipping unimplemented; keep MTD plus SPDZ2k aggregation as the implemented core.**
+**Decision: Option C -> leave clipping unimplemented; keep MTD plus SPDZ2k aggregation as the implemented core.**
 
 ## Why no clipping is being integrated now
 
@@ -18,4 +18,4 @@ Do not add client-side clamps, trust client-reported norms, or claim enforceable
 
 Reconsider clipping only after a rigorously specified MPC algorithm establishes fixed-point/ring bounds, handles zero and overflow cases, verifies maliciously oversized inputs, and completes end-to-end runtime/communication tests at representative model dimensions. Consider a smaller research model or separately justified tensor/block partition only as a new research study; do not imply equivalence to global L2 clipping.
 
-Evidence sources retained unchanged: `docs/mpc_bounded_contribution.md`, `research_output/final_thesis_package/MPC_DEFENSE_FEASIBILITY.md`, `research_output/scalability_phase/NORM_CLIP_*`, and `research_output/MPC_BCD_COMPILE_*.log`.
+Evidence sources retained unchanged: `docs/mpc_bounded_contribution.md`, `research_output/archive/early_phase_2026-11-18/final_thesis_package/MPC_DEFENSE_FEASIBILITY.md`, `research_output/archive/early_phase_2026-11-18/scalability_phase/NORM_CLIP_*`, and `research_output/archive/early_phase_2026-11-18/MPC_BCD_COMPILE_*.log`.
