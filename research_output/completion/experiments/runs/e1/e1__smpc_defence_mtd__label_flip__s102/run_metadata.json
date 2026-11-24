@@ -1,0 +1,52 @@
+{
+  "run_id": "e1__smpc_defence_mtd__label_flip__s102",
+  "study": "e1",
+  "condition": "smpc_defence_mtd",
+  "attack": "label_flip",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "2a814d55d73d0aa20daa923df3d2e064e498eca1431e7ddb0f94819e9a64a1a8",
+  "config_sha256": "b5e770848bb9e69ece1221d3ec26480a70d2139aacd8d902cdafa686d7624e2a",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_defence_mtd__label_flip__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T03:07:12Z",
+  "load_average_start": [
+    4.97900390625,
+    4.31494140625,
+    3.56298828125
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 339.418,
+  "finished_utc": "2026-11-20T03:12:51Z",
+  "load_average_end": [
+    4.35009765625,
+    4.3076171875,
+    3.78076171875
+  ],
+  "analysis": {
+    "final_accuracy": 0.0153,
+    "final_loss": 2.637998390960693,
+    "final_backdoor_asr": 0.09,
+    "mean_deviation_from_honest_relative": 0.35325877680976026,
+    "mean_malicious_share_effective": 0.17547301167181134,
+    "mean_malicious_share_submitted": 0.6039337266484406,
+    "mean_reference_max_abs_error": 8.611629406657383e-08,
+    "max_reference_max_abs_error": 2.384185791015625e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.35325877680976026,
+    "mean_malicious_share_effective": 0.17547301167181134,
+    "mean_malicious_share_submitted": 0.6039337266484406,
+    "mean_reference_max_abs_error": 8.611629406657383e-08,
+    "max_reference_max_abs_error": 2.384185791015625e-07,
+    "mean_reference_relative_error": 8.470528242415152e-08,
+    "max_reference_relative_error": 1.4713326903040292e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

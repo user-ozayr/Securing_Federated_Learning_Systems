@@ -66,7 +66,7 @@ def test_output_client_receives_only_weighted_average_and_count(monkeypatch, tmp
             return [3, 300, 600] + [0] * (count - 3)
 
     monkeypatch.setattr(
-        "fl_security.smpc.mp_spdz._client_class", lambda mp_home: Client
+        "fl_security.smpc.mp_spdz._load_external_io_client_class", lambda mp_home: Client
     )
     monkeypatch.setattr(
         "fl_security.smpc.mp_spdz._connect_client",
@@ -105,7 +105,7 @@ def test_output_client_reads_full_array_reveal_in_one_message(monkeypatch, tmp_p
             return [6] + [600] * 10_000 + [0] * (count - 10_001)
 
     monkeypatch.setattr(
-        "fl_security.smpc.mp_spdz._client_class", lambda mp_home: Client
+        "fl_security.smpc.mp_spdz._load_external_io_client_class", lambda mp_home: Client
     )
     monkeypatch.setattr(
         "fl_security.smpc.mp_spdz._connect_client",
@@ -132,7 +132,7 @@ def test_output_client_rejects_wrong_aggregate_sample_count(monkeypatch, tmp_pat
             return [4, 300, 600] + [0] * (SPDZ2K_IO_CHUNK_SIZE - 3)
 
     monkeypatch.setattr(
-        "fl_security.smpc.mp_spdz._client_class", lambda mp_home: Client
+        "fl_security.smpc.mp_spdz._load_external_io_client_class", lambda mp_home: Client
     )
     monkeypatch.setattr(
         "fl_security.smpc.mp_spdz._connect_client",
@@ -173,7 +173,7 @@ def test_output_client_rejects_truncated_full_array(monkeypatch, tmp_path):
             return [3, 300, 600]
 
     monkeypatch.setattr(
-        "fl_security.smpc.mp_spdz._client_class", lambda mp_home: Client
+        "fl_security.smpc.mp_spdz._load_external_io_client_class", lambda mp_home: Client
     )
     monkeypatch.setattr(
         "fl_security.smpc.mp_spdz._connect_client",
@@ -202,7 +202,7 @@ def test_output_client_rejects_nonzero_padding_tail(monkeypatch, tmp_path):
             return values
 
     monkeypatch.setattr(
-        "fl_security.smpc.mp_spdz._client_class", lambda mp_home: Client
+        "fl_security.smpc.mp_spdz._load_external_io_client_class", lambda mp_home: Client
     )
     monkeypatch.setattr(
         "fl_security.smpc.mp_spdz._connect_client",

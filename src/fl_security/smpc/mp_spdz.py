@@ -102,7 +102,7 @@ def client_port_base() -> int:
     return value
 
 
-def _client_class(mp_spdz_home: str | os.PathLike[str]):
+def _load_external_io_client_class(mp_spdz_home: str | os.PathLike[str]):
     external_io = Path(mp_spdz_home).expanduser().resolve() / "ExternalIO"
     client_path, domains_path = external_io / "client.py", external_io / "domains.py"
     if not client_path.is_file() or not domains_path.is_file():
@@ -263,7 +263,7 @@ def submit_client_update(
         raise ValueError("client_id must be a valid MP-SPDZ client ID")
     if len(hosts) < 2 or not all(isinstance(host, str) and host for host in hosts):
         raise ValueError("at least two SPDZ2k party hosts are required")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(
         client_class, hosts, port_base, client_id, credentials_dir
     )
@@ -275,6 +275,73 @@ def submit_client_update(
     finally:
         _close_client(client)
     return len(wire_values) * 8
+
+
+def submit_client_delta(
+    local_state: Mapping[str, torch.Tensor],
+    global_state: Mapping[str, torch.Tensor],
+    num_examples: int,
+    client_id: int,
+    *,
+    hosts: Sequence[str],
+    port_base: int,
+    credentials_dir: str | os.PathLike[str],
+    mp_spdz_home: str | os.PathLike[str],
+    fractional_bits: int,
+    chunk_size: int,
+) -> int:
+    """Submit ``[count, round((w_local - w_global) * 2^f)...]`` for robust aggregation."""
+    from fl_security.smpc.robust import chunked_wire_values, encode_delta
+
+    if (
+        isinstance(client_id, bool)
+        or not isinstance(client_id, int)
+        or client_id < 0
+        or client_id > 65_535
+    ):
+        raise ValueError("client_id must be a valid MP-SPDZ client ID")
+    if len(hosts) < 2 or not all(isinstance(host, str) and host for host in hosts):
+        raise ValueError("at least two SPDZ2k party hosts are required")
+    encoded = encode_delta(local_state, global_state, fractional_bits)
+    wire_values = chunked_wire_values(num_examples, encoded, chunk_size)
+    client_class = _load_external_io_client_class(mp_spdz_home)
+    client = _connect_client(client_class, hosts, port_base, client_id, credentials_dir)
+    try:
+        for offset in range(0, len(wire_values), chunk_size):
+            client.send_private_inputs(wire_values[offset : offset + chunk_size])
+    finally:
+        _close_client(client)
+    return len(wire_values) * 8
+
+
+def receive_robust_result(
+    *,
+    hosts: Sequence[str],
+    port_base: int,
+    credentials_dir: str | os.PathLike[str],
+    mp_spdz_home: str | os.PathLike[str],
+    output_client_id: int,
+    client_count: int,
+    dimension: int,
+):
+    """Receive the robust program's header and weighted sum as the output client."""
+    from fl_security.smpc.robust import result_from_outputs
+
+    if (
+        isinstance(output_client_id, bool)
+        or not isinstance(output_client_id, int)
+        or not 0 <= output_client_id <= 65_535
+    ):
+        raise ValueError("output_client_id must be a valid MP-SPDZ client ID")
+    if client_count < 2 or dimension < 1:
+        raise ValueError("robust output requires two clients and a positive dimension")
+    client_class = _load_external_io_client_class(mp_spdz_home)
+    client = _connect_client(client_class, hosts, port_base, output_client_id, credentials_dir)
+    try:
+        outputs = client.receive_outputs(2 + 2 * client_count + dimension)
+    finally:
+        _close_client(client)
+    return result_from_outputs(outputs, client_count, dimension)
 
 
 def receive_weighted_average(
@@ -305,7 +372,7 @@ def receive_weighted_average(
         raise ValueError("output_client_id must be a valid MP-SPDZ client ID")
     if len(hosts) < 2 or not all(isinstance(host, str) and host for host in hosts):
         raise ValueError("at least two SPDZ2k party hosts are required")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(
         client_class,
         hosts,
@@ -422,7 +489,14 @@ def start_round(
     expected_counts: Sequence[int],
     output_client_id: int,
     port_base: int,
+    *,
+    program: str = "weighted_sum",
+    weights: Sequence[int] | None = None,
+    robust_spec: Sequence[int] | None = None,
+    chunk_size: int | None = None,
 ) -> None:
+    if program not in ("weighted_sum", "robust_aggregate"):
+        raise ValueError("unsupported SPDZ2k program")
     if not parties:
         raise ValueError("at least two SPDZ2k parties are required")
     if len(parties) < 2:
@@ -469,11 +543,35 @@ def start_round(
         "output_client_id": int(output_client_id),
         "client_port_base": int(port_base),
     }
+    if program == "robust_aggregate":
+        from fl_security.smpc.robust import validate_spec
+
+        if weights is None or robust_spec is None or chunk_size is None:
+            raise ValueError("robust aggregation requires weights, robust_spec and chunk_size")
+        if len(weights) != len(client_ids):
+            raise ValueError("robust aggregation requires one weight per client")
+        weight_by_client = dict(zip(client_ids, weights))
+        ordered_weights = [int(weight_by_client[cid]) for cid, _ in client_count_pairs]
+        validate_spec(list(robust_spec), ordered_weights)
+        payload.update({
+            "program": program,
+            "weights": ordered_weights,
+            "robust_spec": [int(value) for value in robust_spec],
+            "chunk_size": int(chunk_size),
+        })
 
     hashes = []
     try:
-        for party in parties:
-            response = _control_request(party, round_id, "start", payload)
+        # Parties compile and launch independently, so the authenticated start
+        # requests are sent concurrently; every response is still checked.
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=len(parties)) as pool:
+            responses = list(pool.map(
+                lambda party: (party, _control_request(party, round_id, "start", payload)),
+                parties,
+            ))
+        for party, response in responses:
             if response.get("status") != "running":
                 raise RuntimeError(
                     f"SPDZ2k party {party.party_id} did not start its round"
@@ -507,8 +605,14 @@ def check_round_running(
             )
 
 
-def finish_round(parties: Sequence[MPSpdzParty], round_id: str) -> None:
+def finish_round(parties: Sequence[MPSpdzParty], round_id: str) -> list[dict]:
+    """Wait for every party to exit successfully, clean up, and return statistics.
+
+    The returned list holds, per party, MP-SPDZ's own end-of-run measurements
+    (protocol seconds, data sent) when the party log contains them.
+    """
     deadline = time.monotonic() + 60.0
+    statistics: dict[int, dict] = {}
     while True:
         errors = []
         all_completed = True
@@ -516,6 +620,8 @@ def finish_round(parties: Sequence[MPSpdzParty], round_id: str) -> None:
             try:
                 response = _control_request(party, round_id, "status", timeout=15.0)
                 if response.get("status") == "completed" and response.get("exit_code") == 0:
+                    stats = response.get("statistics")
+                    statistics[party.party_id] = dict(stats) if isinstance(stats, dict) else {}
                     continue
                 if response.get("status") == "running":
                     all_completed = False
@@ -542,6 +648,37 @@ def finish_round(parties: Sequence[MPSpdzParty], round_id: str) -> None:
             "SPDZ2k round completed, but cleanup failed: "
             + "; ".join(cleanup_errors)
         )
+    return [
+        {"party_id": party.party_id, **statistics.get(party.party_id, {})}
+        for party in parties
+    ]
+
+
+def submit_wire_values(
+    wire_values: Sequence[int],
+    client_id: int,
+    *,
+    hosts: Sequence[str],
+    port_base: int,
+    credentials_dir: str | os.PathLike[str],
+    mp_spdz_home: str | os.PathLike[str],
+    chunk_size: int,
+) -> int:
+    """Send an already-encoded, chunk-padded input vector (used for robustness tests).
+
+    Values are reduced modulo the MP-SPDZ input domain by the client library, so
+    this function can also express deliberately malformed (wrapping) inputs.
+    """
+    if not wire_values or len(wire_values) % chunk_size:
+        raise ValueError("wire values must be a non-empty multiple of chunk_size")
+    client_class = _load_external_io_client_class(mp_spdz_home)
+    client = _connect_client(client_class, hosts, port_base, client_id, credentials_dir)
+    try:
+        for offset in range(0, len(wire_values), chunk_size):
+            client.send_private_inputs(list(wire_values[offset : offset + chunk_size]))
+    finally:
+        _close_client(client)
+    return len(wire_values) * 8
 
 
 def abort_round(parties: Sequence[MPSpdzParty], round_id: str) -> None:

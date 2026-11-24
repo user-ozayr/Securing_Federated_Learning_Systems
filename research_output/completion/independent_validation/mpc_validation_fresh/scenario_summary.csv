@@ -1,0 +1,14 @@
+scenario,mode,threshold,clients,dimension,mpc_matches_reference_exactly,threshold_norm,accepted,clip_flags,aggregate_norm,output_check_passed,expected_output_check,max_abs_error_vs_ideal_float_clipping,end_to_end_seconds,protocol_seconds_party0,global_data_sent_mb
+clean_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",0.3217613255301024,True,True,0.0,11.396697902004234,7.45199,1273.25
+scaled_replacement_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.3266411566751772,True,True,0.011045857371498366,10.443900446989574,6.84121,1273.25
+boundary_static_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[1, 0, 0, 1]",0.3371899951604076,True,True,0.0010306514744028439,10.391945006995229,6.7747,1273.25
+adaptive_clip_screen,clip_screen,adaptive,4,300,True,0.49997873931625003,"[1, 1, 1, 0]","[0, 0, 1, 0]",0.2768210942503258,True,True,0.00018867733251730703,12.145506077999016,8.03094,1533.71
+adaptive_screen_only,screen,adaptive,4,300,True,0.49997996126193356,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.28900940796999247,True,True,0.0,8.615282354003284,4.7405,827.943
+sample_weighted_clip,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.4759813297798016,True,True,0.01012317299463654,10.283629051991738,6.70885,1273.25
+malformed_out_of_range,clip,static,4,300,True,1.0,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.32606555947152543,True,True,0.0,10.390422048018081,6.79626,1273.21
+wrap_large_coordinate,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",16777215.992874147,False,False,16777216.002375286,10.391540007985895,6.77192,1273.25
+malformed_negative_square,clip,static,4,300,True,1.0,"[1, 1, 1, 0]","[0, 0, 0, 0]",0.35468025286473864,True,True,0.0,10.562646593985846,6.86701,1273.21
+wrap_single_attacker,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",65536.00679070645,False,False,65535.99773661295,10.340766606997931,6.74933,1273.25
+inverse_weight_trick,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 1]",0.2966772034014233,True,True,0.018819102534541374,10.320587422989774,6.67864,1273.25
+colluding_cancellation_k4,clip,static,4,300,True,1.0,"[1, 1, 1, 1]","[0, 0, 0, 0]",1.4249190957177038,False,,0.244049072265625,10.307462312979624,6.74012,1273.25
+colluding_cancellation_k8,clip,static,8,300,True,1.0,"[1, 1, 1, 1, 1, 1, 1, 1]","[0, 0, 0, 0, 0, 0, 0, 0]",0.7245165447402038,True,,0.14670562744140625,18.222176694020163,12.9515,2574.31

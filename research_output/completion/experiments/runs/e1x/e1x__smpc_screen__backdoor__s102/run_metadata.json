@@ -1,0 +1,54 @@
+{
+  "run_id": "e1x__smpc_screen__backdoor__s102",
+  "study": "e1x",
+  "condition": "smpc_screen",
+  "attack": "backdoor",
+  "seed": 102,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "cee43d1340ee82899083d29f93d5481c0431788d2e765132e446fa92c1b6eeab",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1x/e1x__smpc_screen__backdoor__s102.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T13:12:08Z",
+  "load_average_start": [
+    4.072265625,
+    4.02587890625,
+    3.52685546875
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 267.891,
+  "finished_utc": "2026-11-20T13:16:36Z",
+  "load_average_end": [
+    3.40576171875,
+    3.74072265625,
+    3.5234375
+  ],
+  "analysis": {
+    "final_accuracy": 0.8197,
+    "final_loss": 0.49169647135734557,
+    "final_backdoor_asr": 0.02388888888888889,
+    "mean_deviation_from_honest_relative": 0.0001938535837804042,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.7874540409000663,
+    "mean_reference_max_abs_error": 6.686896084975857e-08,
+    "max_reference_max_abs_error": 7.947285970977269e-08,
+    "mean_reference_relative_error": 1.1913174277410652e-07,
+    "max_reference_relative_error": 1.5853603122718595e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.0001938535837804042,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.7874540409000663,
+    "mean_reference_max_abs_error": 6.686896084975857e-08,
+    "max_reference_max_abs_error": 7.947285970977269e-08,
+    "mean_reference_relative_error": 1.1913174277410652e-07,
+    "max_reference_relative_error": 1.5853603122718595e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

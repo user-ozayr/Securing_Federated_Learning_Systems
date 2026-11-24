@@ -6,7 +6,7 @@ from fl_security.federated.flower_simulation import run_flower_simulation
 from fl_security.smpc.local_demo import run_with_local_mp_spdz
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Run FL Security with Flower")
     parser.add_argument("--config", required=True, help="Path to YAML configuration")
     parser.add_argument(

@@ -1,0 +1,54 @@
+{
+  "run_id": "e1__smpc_only__sign_flip__s101",
+  "study": "e1",
+  "condition": "smpc_only",
+  "attack": "sign_flip",
+  "seed": 101,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "633ef123d3c3afb3e2065defae6fd1ae2e50becc91ee439fb38b03cf12ea29eb",
+  "git_commit": "99366f7edfe67ccc8024ed57e19ab93f0ebc9d0f",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1/e1__smpc_only__sign_flip__s101.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T12:29:07Z",
+  "load_average_start": [
+    1.775390625,
+    1.62890625,
+    1.61962890625
+  ],
+  "status": "aborted",
+  "detail": "aborted after round 3: RuntimeError: SPDZ2k round aborted: no clients completed",
+  "wall_seconds": 190.043,
+  "finished_utc": "2026-11-20T12:32:17Z",
+  "load_average_end": [
+    1.8115234375,
+    1.865234375,
+    1.71826171875
+  ],
+  "analysis": {
+    "final_accuracy": 0.1,
+    "final_loss": 1351211979112.448,
+    "final_backdoor_asr": 0.0,
+    "mean_deviation_from_honest_relative": 1.7561073234861688,
+    "mean_malicious_share_effective": 0.6489215850252182,
+    "mean_malicious_share_submitted": 0.6489215850252182,
+    "mean_reference_max_abs_error": 0.00012212960670391718,
+    "max_reference_max_abs_error": 0.0003662109375,
+    "mean_reference_relative_error": 2.6779255793925202e-08,
+    "max_reference_relative_error": 2.8958577809888487e-08
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 1.7561073234861688,
+    "mean_malicious_share_effective": 0.6489215850252182,
+    "mean_malicious_share_submitted": 0.6489215850252182,
+    "mean_reference_max_abs_error": 0.00012212960670391718,
+    "max_reference_max_abs_error": 0.0003662109375,
+    "mean_reference_relative_error": 2.6779255793925202e-08,
+    "max_reference_relative_error": 2.8958577809888487e-08,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

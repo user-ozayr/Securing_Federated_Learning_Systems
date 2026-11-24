@@ -15,7 +15,7 @@ dist/
 # Local datasets and generated experiment outputs
 data/
 results/
-experiments/
+/experiments/
 
 # Keep selected research evidence, including CSV metrics
 !research_output/
@@ -40,3 +40,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Binary instrumentation archives of the completion evaluation (about 115 MB) stay
+# on the host; each file is hashed in research_output/completion/final_validation_manifest.json
+research_output/completion/**/*.npz

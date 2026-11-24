@@ -12,6 +12,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from pathlib import Path
 
 from fl_security.federated.flower_simulation import run_flower_simulation
@@ -66,15 +67,32 @@ def run_with_local_mp_spdz(config: dict) -> None:
         raise ValueError("local MP-SPDZ mode requires smpc.enabled=true")
     if smpc.get("backend") != "mp_spdz_spdz2k":
         raise ValueError("local MP-SPDZ mode requires backend=mp_spdz_spdz2k")
+    party_count = int(smpc["num_aggregation_parties"])
+    client_count = int(config["federated_learning"]["num_clients"])
+    with local_spdz2k_environment(party_count, client_count):
+        run_flower_simulation(config)
+
+
+@contextmanager
+def local_spdz2k_environment(party_count: int, client_count: int, *, keep_logs_in=None):
+    """Start one authenticated SPDZ2k party service per party on this host.
+
+    Inside the context the coordinator environment variables
+    (FL_MPSPDZ_PARTIES_JSON, FL_MPSPDZ_CLIENT_PORT_BASE,
+    FL_MPSPDZ_CLIENT_CREDENTIALS_DIR) point at the temporary deployment. Client
+    IDs 0..client_count-1 and the output client ID ``client_count`` receive
+    temporary TLS credentials. If ``keep_logs_in`` is a directory, party logs
+    are copied there before the temporary deployment is removed.
+    """
     mp_home_value = os.environ.get("FL_MPSPDZ_HOME")
     if not mp_home_value:
         raise RuntimeError("FL_MPSPDZ_HOME must point to the pinned MP-SPDZ v0.4.3 tree")
     mp_home = Path(mp_home_value).expanduser().resolve()
     if os.name != "posix":
         raise RuntimeError("local MP-SPDZ mode requires a Linux/POSIX host")
+    if party_count < 2 or client_count < 1:
+        raise ValueError("local SPDZ2k deployment requires two parties and one client")
 
-    party_count = int(smpc["num_aggregation_parties"])
-    client_count = int(config["federated_learning"]["num_clients"])
     client_port = _free_port_span(party_count)
     player_port = _free_port_span(
         party_count, set(range(client_port, client_port + party_count))
@@ -152,6 +170,11 @@ def run_with_local_mp_spdz(config: dict) -> None:
                     "party_count": party_count,
                     "client_port_base": client_port,
                     "control_token": control_token,
+                    # Early-crash detection window after launching spdz2k-party.x;
+                    # later failures are still caught by status polling.
+                    "startup_timeout": float(
+                        os.environ.get("FL_MPSPDZ_STARTUP_TIMEOUT", "2.0")
+                    ),
                 },
                 name=f"fl-mp-spdz-party-{party_id}",
             )
@@ -177,7 +200,12 @@ def run_with_local_mp_spdz(config: dict) -> None:
         os.environ["FL_MPSPDZ_CLIENT_CREDENTIALS_DIR"] = str(runtime_root)
         if "FL_MTD_SECRET" in previous_env:
             os.environ["FL_MTD_SECRET"] = previous_env["FL_MTD_SECRET"]
-        run_flower_simulation(config)
+        yield {
+            "runtime_root": runtime_root,
+            "party_count": party_count,
+            "client_port_base": client_port,
+            "parties": parties,
+        }
     finally:
         for name in protected_names:
             os.environ.pop(name, None)
@@ -190,4 +218,9 @@ def run_with_local_mp_spdz(config: dict) -> None:
             if process.is_alive():
                 process.kill()
                 process.join(timeout=2)
+        if keep_logs_in is not None:
+            destination = Path(keep_logs_in)
+            destination.mkdir(parents=True, exist_ok=True)
+            for log in runtime_root.glob("party-*/logs/*.log"):
+                shutil.copy2(log, destination / f"{log.parent.parent.name}_{log.name}")
         shutil.rmtree(runtime_root)

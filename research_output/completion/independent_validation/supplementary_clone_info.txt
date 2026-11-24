@@ -1,0 +1,14 @@
+supplementary fresh clone: /home/ubuntu/gemini/fresh_validation_clone_20261120T162617Z
+commit: e4c090a054a7740a8cbf7bf682eb9f5ad5199437
+date (UTC): 2026-11-20T16:26:17Z
+tracked files modified in clone: 0
+changes since the commit of the full independent validation (99366f7):
+ analyze_suite.py                        |   5 +-
+ src/fl_security/experiments/analysis.py |  63 +++++++++++++++++-
+ src/fl_security/experiments/report.py   | 111 ++++++++++++++++++++++----------
+ src/fl_security/experiments/suite.py    |  28 +++++++-
+ tests/test_analysis_cohort.py           |  84 ++++++++++++++++++++++++
+ tests/test_report_matrix.py             |  72 +++++++++++++++++++++
+ 6 files changed, 322 insertions(+), 41 deletions(-)
+2026-11-20T16:26:26Z pytest exit 0: ================== 131 passed, 1 skipped, 2 warnings in 6.22s ==================
+2026-11-20T16:26:31Z import provenance exit 0: RESULT: PASS

@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from fl_security.attacks.byzantine import ByzantineAttacker
 from fl_security.federated.aggregation import weighted_fedavg
 from fl_security.federated.training import train_local
-from fl_security.mtd.controller import MTDController
 
 
 def test_sign_flip_client_updates_reach_fedavg():
@@ -23,7 +22,6 @@ def test_sign_flip_client_updates_reach_fedavg():
         },
     }
     attacker = ByzantineAttacker(config, num_clients=2)
-    round_config = MTDController(config).generate_round_config(1, 2, 1.0)
     global_state = {"weight": torch.tensor([0.0, 0.0])}
     honest_states = [
         {"weight": torch.tensor([1.0, -2.0])},

@@ -1,0 +1,8 @@
+{
+  "error_type": "RuntimeError",
+  "error": "Simulation crashed.",
+  "cause_type": "ValueError",
+  "cause": "secure defence parameters leave too little margin between honest aggregates and malformed wrapping inputs; lower fractional_bits, clip_bits, weight_bits or max_norm",
+  "rounds_completed": 0,
+  "rounds_configured": 10
+}

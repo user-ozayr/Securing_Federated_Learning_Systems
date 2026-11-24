@@ -1,0 +1,20 @@
+e1x__smpc_defence__backdoor__s101: rounds suite=11 fresh=11 matched=11
+  max |global_accuracy: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |global_loss: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |backdoor_asr: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |defence_threshold_norm: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |defence_aggregate_norm: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |defence_accepted_weight: suite - fresh| = 0.0  (NaN mismatches: 0)
+  selected_client_ids identical in every round: True
+  malicious_client_ids identical in every round: True
+  defence_accepted_client_ids identical in every round: True
+  defence_rejected_client_ids identical in every round: True
+  defence_clipped_client_ids identical in every round: True
+  VERDICT e1x__smpc_defence__backdoor__s101: IDENTICAL
+e1__baseline__backdoor__s101: rounds suite=11 fresh=11 matched=11
+  max |global_accuracy: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |global_loss: suite - fresh| = 0.0  (NaN mismatches: 0)
+  max |backdoor_asr: suite - fresh| = 0.0  (NaN mismatches: 0)
+  selected_client_ids identical in every round: True
+  malicious_client_ids identical in every round: True
+  VERDICT e1__baseline__backdoor__s101: IDENTICAL

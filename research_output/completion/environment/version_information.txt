@@ -1,0 +1,17 @@
+Repository: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis
+Branch: research/thesis-completion
+Implementation commit: 071fbbc0822680a8456f1b90f286fc70bde4be84
+Base commit (research/spdz2k-thesis): 5c7b4978a8d1c7f54f03cce28d5498b5ee3fef4c
+Python: Python 3.11.18 at /home/ubuntu/gemini/fl-security-research/.venv311 (existing environment, not modified)
+torch 2.15.0+cu132 | torchvision 0.29.2+cu132 | flwr 1.38.0 | ray 2.55.1 | numpy 2.4.6 | pandas 3.1.1
+MP-SPDZ: v0.4.3 at /home/ubuntu/gemini/MP-SPDZ-v0.4.3; binary spdz2k-party.x sha256 dd20565f0b0949185ab99a6cb42326f0376f2aa1506db4e65041a3009754221a
+MP-SPDZ protocol: SPDZ2k, ring Z_2^64 (-R 64), SPDZ2k security parameter s=64, statistical security 40 (party log banner)
+MP-SPDZ CONFIG: GDEBUG = -g
+MP-SPDZ CONFIG: USE_NTL = 0
+MP-SPDZ CONFIG: ARCH = -mtune=native -msse4.1 -msse4.2 -maes -mpclmul -mavx -mavx2 -mbmi2 -madx
+MP-SPDZ CONFIG: ARCH = -march=native
+MP-SPDZ CONFIG: ARCH =
+MP-SPDZ CONFIG: ARCH = -mcpu=native
+MP-SPDZ CONFIG.mine: 0 bytes
+Compiler: g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+Dataset: Fashion-MNIST via torchvision into ./data (git-ignored); CIFAR-10 available in the original repository data/

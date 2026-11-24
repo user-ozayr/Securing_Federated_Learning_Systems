@@ -7,16 +7,42 @@ from fl_security.mtd.client_selection import select_clients
 from fl_security.mtd.randomness import HMACCounterRNG
 
 
+SCHEDULES = ("static", "deterministic", "secret")
+
+
 class MTDController:
+    """Round-scoped participation scheduling.
+
+    ``mtd.schedule`` (optional) makes the participation regime explicit:
+
+    * ``static`` – the same cohort (first K clients) every round;
+    * ``deterministic`` – a fresh cohort every round derived from the public
+      experiment seed only (reproducible, therefore predictable);
+    * ``secret`` – a fresh cohort every round derived with HMAC-SHA256 from
+      ``FL_MTD_SECRET`` (required, at least 32 bytes) and the seed.
+
+    Without ``schedule`` the historical behaviour is kept: ``enabled`` selects a
+    dynamic schedule, which is secret-derived whenever FL_MTD_SECRET is set.
+    """
+
     def __init__(self, config: dict):
         self.config = config.get("mtd", {})
         self.enabled = bool(self.config.get("enabled", False))
+        self.schedule = self.config.get("schedule")
+        if self.schedule is not None:
+            if self.schedule not in SCHEDULES:
+                raise ValueError(f"mtd.schedule must be one of {SCHEDULES}")
+            self.enabled = self.schedule != "static"
         self.selection_strategy = self.config.get("selection_strategy", "random")
         configured_seed = int(config.get("experiment", {}).get("seed", 42))
 
         # The live schedule uses an HMAC-derived PRF key. Without this secret,
         # schedules are reproducible simulation artifacts and are not secret.
         secret = os.environ.get("FL_MTD_SECRET", "")
+        if self.schedule == "deterministic":
+            secret = ""
+        if self.schedule == "secret" and not secret:
+            raise ValueError("mtd.schedule 'secret' requires FL_MTD_SECRET to be set")
         material = f"fl-security-mtd-seed-v1:{configured_seed}".encode("utf-8")
         if secret:
             secret_bytes = secret.encode("utf-8")
@@ -64,11 +90,10 @@ class MTDController:
             num_clients, fraction, strategy=strategy, seed=round_seed, rng=rng
         )
 
-        if self.smpc_enabled:
-            if len(selected) < self.min_clients_per_round:
-                raise ValueError(
-                    f"SPDZ2k requires at least {self.min_clients_per_round} selected clients per round"
-                )
+        if self.smpc_enabled and len(selected) < self.min_clients_per_round:
+            raise ValueError(
+                f"SPDZ2k requires at least {self.min_clients_per_round} selected clients per round"
+            )
 
         return {
             "round": round_num,

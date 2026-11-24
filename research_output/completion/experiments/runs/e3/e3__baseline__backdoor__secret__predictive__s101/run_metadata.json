@@ -1,0 +1,52 @@
+{
+  "run_id": "e3__baseline__backdoor__secret__predictive__s101",
+  "study": "e3",
+  "condition": "baseline",
+  "attack": "backdoor__secret__predictive",
+  "seed": 101,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "f8df2b6df7f199a4ea260920686208d532836819d28af0d8aab1c02f5c1e5004",
+  "config_sha256": "0aca66eceb0835a6200356c29dd4eff26ab465868489413c4837c59ea71d8e79",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e3/e3__baseline__backdoor__secret__predictive__s101.yaml",
+  "started_utc": "2026-11-20T02:20:16Z",
+  "load_average_start": [
+    1.4150390625,
+    1.66455078125,
+    1.9248046875
+  ],
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.859,
+  "finished_utc": "2026-11-20T02:22:07Z",
+  "load_average_end": [
+    1.44140625,
+    1.630859375,
+    1.8837890625
+  ],
+  "analysis": {
+    "final_accuracy": 0.7933,
+    "final_loss": 0.5462658951759338,
+    "final_backdoor_asr": 0.113,
+    "mean_deviation_from_honest_relative": 0.9362299445241955,
+    "mean_malicious_share_effective": 0.3905606130253486,
+    "mean_malicious_share_submitted": 0.3905606130253486,
+    "mean_reference_max_abs_error": 1.0011717677116394e-07,
+    "max_reference_max_abs_error": 1.7881393432617188e-07
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.9362299445241955,
+    "mean_malicious_share_effective": 0.3905606130253486,
+    "mean_malicious_share_submitted": 0.3905606130253486,
+    "mean_reference_max_abs_error": 1.0011717677116394e-07,
+    "max_reference_max_abs_error": 1.7881393432617188e-07,
+    "mean_reference_relative_error": 7.908415802530267e-08,
+    "max_reference_relative_error": 1.5133624593719814e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

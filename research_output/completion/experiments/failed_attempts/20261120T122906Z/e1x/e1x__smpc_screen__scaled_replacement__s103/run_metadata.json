@@ -1,0 +1,31 @@
+{
+  "run_id": "e1x__smpc_screen__scaled_replacement__s103",
+  "study": "e1x",
+  "condition": "smpc_screen",
+  "attack": "scaled_replacement",
+  "seed": 103,
+  "uses_mpc": true,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "cf41353192b532f804d5ea9514313198534e9720f59d95d9a37fed448b9c0f00",
+  "git_commit": "f75eb7b6bed7c6fe880026f369deb7946d954c58",
+  "git_dirty": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/run_experiment.py --config research_output/completion/experiments/configs/e1x/e1x__smpc_screen__scaled_replacement__s103.yaml --local-mp-spdz",
+  "started_utc": "2026-11-20T10:52:32Z",
+  "load_average_start": [
+    2.4921875,
+    3.62841796875,
+    3.736328125
+  ],
+  "status": "failed",
+  "detail": "exit code 1",
+  "wall_seconds": 29.346,
+  "finished_utc": "2026-11-20T10:53:01Z",
+  "load_average_end": [
+    2.310546875,
+    3.4970703125,
+    3.6904296875
+  ]
+}

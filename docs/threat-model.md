@@ -1,96 +1,95 @@
-# SPDZ2k Threat Model
+# Threat Model: SPDZ2k Aggregation, In-MPC Norm Defence and MTD
 
 ## Protected assets
 
-- Each client's weighted model update before aggregation.
-- MP-SPDZ party private keys, client private keys, and coordinator control
-  tokens.
-- Correct execution of the weighted-sum circuit, including integrity checks
-  performed by SPDZ2k.
+- Each client's model update before aggregation (confidentiality).
+- The integrity of the aggregate: each accepted client's influence is bounded
+  (when the in-MPC defence is enabled).
+- MP-SPDZ party private keys, client private keys, coordinator control tokens,
+  and the MTD scheduling secret.
+- Correct execution of the secure programs, including SPDZ2k's MAC checks.
 
 ## Roles and trust boundaries
 
-- **Clients** hold local training data and submit model tensors multiplied by
-  their server-verified example counts. Client authentication proves
-  possession of a provisioned MP-SPDZ client key; it does not prove that the
-  client trained honestly.
+- **Clients** hold local training data. In sum-only mode they submit model
+  tensors multiplied by their server-verified example counts; in robust mode
+  they submit their update `w_local − w_global` at scale `2^f`. Client
+  authentication proves possession of a provisioned MP-SPDZ client key; it
+  does not prove that the client trained honestly or encoded honestly.
 - **Aggregation parties** jointly run the pinned MP-SPDZ v0.4.3 SPDZ2k
-  protocol. The dishonest-majority security assumption permits up to `n - 1`
-  corrupt parties, provided at least one party is honest and the protocol
-  completes.
-- **Flower coordinator/output client** selects the cohort, distributes the
-  global model, checks Flower proxy identities and sample counts, and receives
-  the final aggregate as the designated output client.
+  protocol (dishonest majority, security with abort): up to `n − 1` corrupt
+  parties are tolerated as long as one party is honest.
+- **Flower coordinator / output client** selects the cohort (MTD), distributes
+  the global model, checks Flower proxy identities and sample counts, receives
+  the revealed outputs, performs the plaintext output-norm check and updates the
+  global model.
 - **Network and deployment operators** provision credentials, configure
-  party/client reachability, and provide TLS for control endpoints. The
-  included party service implements authenticated control requests but does
-  not terminate TLS.
+  reachability, and terminate TLS for the control endpoints.
 
-## In-scope adversaries and guarantees
+## Adversaries considered
 
-SPDZ2k protects the private inputs and correctness of the secure computation
-against malicious aggregation parties under the protocol's assumptions. If a
-party deviates from the protocol or a MAC check fails, the round aborts rather
-than returning a success-shaped fallback. The implementation uses authenticated
-MP-SPDZ client I/O and reveals the weighted sum and total sample count only to
-the configured output client.
+| Adversary | Capability | Mitigation in this framework | Residual risk |
+|---|---|---|---|
+| Curious coordinator | observes everything sent to it | sees only revealed outputs (aggregate, threshold, accept/clip flags as configured) | inference from aggregates of small or differenced cohorts |
+| Malicious MPC parties (≤ n−1) | deviate arbitrarily | SPDZ2k MACs → abort; bytecode hash agreement | denial of service (abort); all-party collusion breaks confidentiality |
+| Malicious clients (training-level) | poisoned data or manipulated updates within the encoding | in-MPC clipping/screening bounds each accepted contribution | attacks within the bound (e.g. small-norm backdoors, label flipping) still have influence |
+| Malicious clients (encoding-level, single) | arbitrary ring elements (wrap-around) | decisions on the visible contribution + plaintext output check | round rejected (availability), never a silently enlarged update |
+| Colluding malicious clients (encoding-level) | inputs whose huge components cancel | output check bounds the applied update by the round bound | per-client bound can be exceeded inside that ball; needs range proofs (not implemented) |
+| Predictive adversary | knows the public configuration/seed; compromises clients it expects to be selected | secret-derived HMAC schedule (`FL_MTD_SECRET`) | none beyond random guessing while the secret stays secret; a selected malicious client still submits malicious updates |
+| Adaptive (defence-aware) attacker | knows thresholds; scales its update to just below them | bound limits its per-round magnitude | maximal-within-bound influence (measured in study E2) |
 
-The party control service authenticates requests with per-party HMAC keys,
-rejects stale/replayed control requests, journals consumed request IDs, and
-rejects reuse of a round ID. Remote control URLs must use HTTPS. The local
-demo's loopback HTTP allowance is for local testing only.
+## Guarantees (and their conditions)
 
-The Flower strategy rejects plaintext client parameters in SMPC mode, binds
-each result to its registered Flower proxy, checks that the full selected
-cohort completed, and verifies reported example counts against the
-server-known partitions. Any failed or missing selected client aborts the
-round. Robust per-client screening is rejected in secure mode because it is
-not computed within the MPC circuit.
+1. **Confidentiality of individual updates** against the coordinator and up
+   to `n − 1` parties: standard SPDZ2k guarantee, conditional on at least one
+   honest party and confidential keys. The coordinator never receives
+   individual tensors in SMPC mode.
+2. **Correctness or abort** of the secure computation: SPDZ2k with MAC checks.
+3. **Bounded per-client influence** (robust mode): every accepted contribution
+   satisfies the configured L2 bound, *or* the round's update is rejected – for
+   any number of honest-format clients and at most one encoding-level malicious
+   client (`docs/secure_robust_aggregation.md`, §4–5).
+4. **Unpredictable participation**: with `mtd.schedule: secret`, cohort
+   prediction by an adversary without the secret is no better than chance
+   (measured: hit rate ≈ K/N = 0.33 for random, predictive and just-in-time
+   adversaries; 1.0 for just-in-time against static/deterministic schedules).
 
 ## Explicit assumptions
 
-- At least one of the configured aggregation parties is honest.
+- At least one aggregation party is honest.
 - Client and party keys are unique, confidential, and provisioned only to the
-  intended runtime.
+  intended runtime; `FL_MTD_SECRET` (≥ 32 bytes) is known only to the coordinator.
 - The designated output client and its host are trusted with the aggregate.
-- The coordinator follows the protocol sufficiently to avoid deliberately
-  leaking information through cohort differencing or adversarial model
-  selection.
-- Deployed control endpoints, MP-SPDZ party links, and client links use
-  appropriately authenticated and confidential channels.
-- Party and coordinator clocks remain within the control service's five-minute
-  anti-replay timestamp window.
+- The coordinator follows the protocol (no deliberate cohort differencing).
+- Deployed control endpoints, MP-SPDZ party links and client links use
+  authenticated, confidential channels; clocks are within the five-minute
+  anti-replay window.
 
 ## Out of scope and limitations
 
-- **Availability and dropout recovery:** every selected client and every
-  configured party must complete. Dropout, timeout, or protocol failure aborts
-  the round; there is no threshold reconstruction or recovery.
-- **All-party collusion or endpoint compromise:** collusion of all parties,
-  theft of client/party keys, or compromise of the output client can expose
-  private inputs or aggregates.
-- **Malicious clients:** the circuit does not prove that updates came from
-  honest training, enforce model norms, or provide range proofs. Poisoning
-  remains possible.
-- **Coordinator inference:** the coordinator sees identities, participation,
-  the current model, and the final aggregate. Minimum cohort size is not
-  differential privacy and does not prevent inference from repeated or
-  differenced cohorts.
-- **Host isolation:** the local demo uses separate processes on one machine.
-  It does not protect against a shared host, kernel, root, or coordinator
-  compromise.
-- **Cross-host validation:** the MP-SPDZ circuit has passed a separate active
-  three-party secure-sum probe, but the integrated Flower control/client path
-  has not been validated across independently administered hosts.
-- **Other privacy claims:** differential privacy, membership/property
-  inference resistance, gradient inversion resistance, and backdoor
-  attack-success-rate claims are not implemented or evaluated.
+- **Availability and dropout recovery:** every selected client and every party
+  must complete; any failure aborts the round. Malformed inputs that trigger the
+  output check cause the round's update to be skipped.
+- **Encoding-level collusion:** see the table above; per-coordinate range proofs
+  are not implemented (cost: one secure comparison per coordinate).
+- **Within-bound poisoning:** norm bounds do not detect attacks whose updates
+  look like honest updates in magnitude (label flipping, small backdoors,
+  sign-flip at honest magnitude). They limit, but do not remove, such influence.
+- **Inference attacks:** differential privacy, membership/property inference
+  and gradient-inversion resistance are not implemented. Revealed thresholds and
+  (optionally) per-client flags are additional leakage, documented in
+  `docs/secure_robust_aggregation.md` §7.
+- **Host isolation:** the evaluation runs all parties, clients and the
+  coordinator on one host. This validates protocol integration, not isolation
+  between independently administered trust domains.
+- **Cross-host deployment:** not validated.
 
-## Failure behavior
+## Failure behaviour
 
 Compilation errors, mismatched bytecode, unavailable parties, client omissions,
-input/output count mismatches, control authentication errors, process failures,
-and secure computation/MAC failures must prevent a new global model from
-being accepted. The coordinator attempts to stop all parties and clean
-round-specific artifacts; cleanup errors are surfaced and do not activate a
-plaintext or additive-sharing fallback.
+input/output count mismatches, control authentication errors, process failures
+and MAC failures prevent a new global model from being accepted; the
+coordinator stops all parties and removes round-specific artefacts (all
+bytecode tapes of the round). No plaintext or additive-sharing fallback exists
+in SMPC mode. A failed output-norm check keeps the previous global model and is
+logged per round.

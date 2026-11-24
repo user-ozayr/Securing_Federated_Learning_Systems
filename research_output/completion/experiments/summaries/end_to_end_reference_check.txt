@@ -1,0 +1,29 @@
+runs: 228  written: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/summaries/end_to_end_reference_check.csv
+
+SPDZ2k robust program: runs=70 rounds=700
+  max abs error, all runs            = 2.384e-07
+  max abs error, healthy models      = 2.384e-07  (runs 70; model |w| <= 100)
+  median of per-run max abs error    = 1.192e-07
+  max relative error (L2), all runs  = 1.994e-07
+
+SPDZ2k sum-only program: runs=36 rounds=324
+  max abs error, all runs            = 1.562e-02
+  max abs error, healthy models      = 9.537e-07  (runs 30; model |w| <= 100)
+  median of per-run max abs error    = 2.384e-07
+  max relative error (L2), all runs  = 9.068e-07
+  diverged models: 6 runs, max |w| up to 2.826e+05: e1__smpc_mtd__sign_flip__s101, e1__smpc_mtd__sign_flip__s102, e1__smpc_mtd__sign_flip__s103, e1__smpc_only__sign_flip__s101, e1__smpc_only__sign_flip__s102, e1__smpc_only__sign_flip__s103
+
+plaintext FedAvg: runs=83 rounds=780
+  max abs error, all runs            = 9.007e+15
+  max abs error, healthy models      = 2.742e-06  (runs 73; model |w| <= 100)
+  median of per-run max abs error    = 2.384e-07
+  max relative error (L2), all runs  = 3.631e-07
+  diverged models: 10 runs, max |w| up to 3.010e+23: e1__baseline__sign_flip__s101, e1__baseline__sign_flip__s102, e1__baseline__sign_flip__s103, e1__mtd_only__sign_flip__s101, e1__mtd_only__sign_flip__s102, e1__mtd_only__sign_flip__s103, e4__baseline__backdoor__boost16__s101, e4__baseline__backdoor__boost16__s102, e4__baseline__sign_flip__str8__s101, e4__baseline__sign_flip__str8__s102
+
+plaintext execution of the robust algorithm: runs=24 rounds=240
+  max abs error, all runs            = 1.192e-07
+  max abs error, healthy models      = 1.192e-07  (runs 24; model |w| <= 100)
+  median of per-run max abs error    = 1.192e-07
+  max relative error (L2), all runs  = 1.768e-07
+
+without exact reference: 15 runs (plaintext detector (no exact reference))

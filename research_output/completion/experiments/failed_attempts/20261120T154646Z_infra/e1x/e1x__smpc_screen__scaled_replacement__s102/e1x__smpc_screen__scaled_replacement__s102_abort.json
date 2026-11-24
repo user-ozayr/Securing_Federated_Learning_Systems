@@ -1,0 +1,8 @@
+{
+  "error_type": "RuntimeError",
+  "error": "Simulation crashed.",
+  "cause_type": "ConnectionResetError",
+  "cause": "[Errno 104] Connection reset by peer",
+  "rounds_completed": 9,
+  "rounds_configured": 10
+}

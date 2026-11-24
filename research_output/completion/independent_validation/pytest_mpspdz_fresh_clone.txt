@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.18, pytest-9.2.0, pluggy-1.7.0 -- /home/ubuntu/gemini/fl-security-research/.venv311/bin/python
+rootdir: /home/ubuntu/gemini/fresh_validation_clone_20261120T155117Z
+configfile: pyproject.toml
+plugins: anyio-4.16.0
+collecting ... collected 1 item
+
+tests/test_mpspdz_integration.py::test_robust_program_matches_reference_in_real_spdz2k PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/test_mpspdz_integration.py: 15 warnings
+  /home/ubuntu/gemini/MP-SPDZ-v0.4.3/ExternalIO/client.py:44: DeprecationWarning: ssl.PROTOCOL_TLSv1_2 is deprecated
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 1 passed, 15 warnings in 36.84s ========================

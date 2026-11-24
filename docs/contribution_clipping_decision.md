@@ -1,3 +1,5 @@
+> **Superseded (2026-11-20).** This document records an earlier decision and is kept unchanged below for traceability. An integer-only in-MPC norm defence (clipping and screening with a constant number of comparisons per client) is now implemented in `src/fl_security/smpc/programs/spdz2k_robust_aggregate.mpc`; see `docs/secure_robust_aggregation.md` and `research_output/completion/`. Coordinate-wise clipping remains unimplemented for the cost reasons given below.
+
 # Contribution-clipping feasibility decision
 
 **Decision: Option C -> leave clipping unimplemented; keep MTD plus SPDZ2k aggregation as the implemented core.**
@@ -16,4 +18,4 @@ Do not add client-side clamps, trust client-reported norms, or claim enforceable
 
 Reconsider clipping only after a rigorously specified MPC algorithm establishes fixed-point/ring bounds, handles zero and overflow cases, verifies maliciously oversized inputs, and completes end-to-end runtime/communication tests at representative model dimensions. Consider a smaller research model or separately justified tensor/block partition only as a new research study; do not imply equivalence to global L2 clipping.
 
-Evidence sources retained unchanged: `docs/mpc_bounded_contribution.md`, `research_output/final_thesis_package/MPC_DEFENSE_FEASIBILITY.md`, `research_output/scalability_phase/NORM_CLIP_*`, and `research_output/MPC_BCD_COMPILE_*.log`.
+Evidence sources retained unchanged: `docs/mpc_bounded_contribution.md`, `research_output/archive/early_phase_2026-11-18/final_thesis_package/MPC_DEFENSE_FEASIBILITY.md`, `research_output/archive/early_phase_2026-11-18/scalability_phase/NORM_CLIP_*`, and `research_output/archive/early_phase_2026-11-18/MPC_BCD_COMPILE_*.log`.
