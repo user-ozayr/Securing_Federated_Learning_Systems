@@ -1,0 +1,46 @@
+{
+  "study": "e6_update_leakage",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "source_sha256": {
+    "run_leakage_study.py": "ea537cf2e4cb3489e00d603ab2d838ec1a130b832ce9b6da320be2ef2f497a77",
+    "src/fl_security/attacks/gradient_inversion.py": "e553103935dffaaa6891df5ad1a5115cc79c0367f2ff09f0e55918e53dfd6e04",
+    "src/fl_security/experiments/leakage.py": "b33e0f62496a7a22fbf806d22ba3d24b790417630f24cfa9e62e7a292e3c4acb",
+    "src/fl_security/smpc/fixed_point.py": "558facbddf8c9ee1a321f9fd4841de324905b0271cdd6c693c933842988f381e",
+    "src/fl_security/smpc/mp_spdz.py": "386b2080529f2530ccb383071241498fb1c667d810571f7c3425c27104cbff49",
+    "src/fl_security/federated/training.py": "a506ccdd005ed20fe3b4df8dab94ca24df8ab944637db16491394487a80f5747",
+    "src/fl_security/federated/model.py": "b96e026daaaaddefc61cfa82ff40ceb355a9e1491535b1e86eff2082162a980c"
+  },
+  "python": "3.11.18",
+  "torch": "2.15.0+cu132",
+  "host": "aarch64",
+  "threads": 1,
+  "config": {
+    "dataset": "fashion_mnist",
+    "num_clients": 12,
+    "cohort_size": 4,
+    "batch_sizes": [
+      1
+    ],
+    "model_states": [
+      "initial",
+      "trained"
+    ],
+    "trials": 3,
+    "client_lr": 0.05,
+    "fixed_point_scale": 1000000,
+    "seed": 7,
+    "recognisable_ssim": 0.5,
+    "inversion": {
+      "iterations": 3000,
+      "learning_rate": 0.1,
+      "tv_weight": 0.01,
+      "restarts": 2
+    }
+  },
+  "started_unix": 1795213891.4623964,
+  "initial_test_accuracy": 0.1092,
+  "trained_test_accuracy": 0.7328,
+  "finished_unix": 1795214388.0454617,
+  "elapsed_seconds": 496.58306527137756
+}

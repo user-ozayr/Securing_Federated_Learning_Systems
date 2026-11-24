@@ -110,6 +110,19 @@ bash research_output/completion/independent_validation.sh   # tests, 13 scenario
 $PY run_mtd_exposure.py --output-dir research_output/completion/experiments/mtd_exposure --trials 200 --rounds 10 100
 ```
 
+## Update leakage (E6, about 10 + 30 min on 3 vCPU)
+
+```bash
+FL_DATA_ROOT=<tree with data/FashionMNIST> research_output/completion/experiments/leakage/calibrate.sh
+FL_DATA_ROOT=<tree with data/FashionMNIST> research_output/completion/experiments/leakage/evaluate.sh
+# merge and figures only (after the shards):
+$PY run_leakage_study.py --output-dir research_output/completion/experiments/leakage/evaluation --num-shards 3 --merge
+$PY research_output/completion/tools/leakage_figures.py research_output/completion/experiments/leakage/evaluation
+```
+
+The trials are deterministic given the seed (cohorts, batches and attack
+initialisation are seeded); runtimes vary.
+
 ## SPDZ2k benchmarks (run with no other experiment on the host)
 
 ```bash
