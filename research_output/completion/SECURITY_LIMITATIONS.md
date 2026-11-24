@@ -82,8 +82,16 @@ read more broadly than it supports.
     BadNets backdoor (naive and adaptive constrain-and-scale), and schedule-aware
     adversaries. Not evaluated: optimisation-based attacks (e.g. inner-product
     manipulation, "a little is enough"), edge-case/semantic backdoors, Sybil
-    attacks beyond the fixed malicious count, inference attacks (membership,
-    property, gradient inversion).
+    attacks beyond the fixed malicious count, membership and property
+    inference. Gradient inversion is evaluated only for single-step (FedSGD)
+    updates and a passive coordinator (E6).
+18b. **Secure aggregation is not data privacy.** E6 shows that the SPDZ2k
+    aggregate of a four-client cohort can still contain exact copies of
+    individual training images when the model has a fully connected first layer:
+    75–100 % of a client's images at B = 1, 3–28 % at B = 8. The coordinator
+    loses only the attribution to a client. Larger cohorts and batches, many
+    local steps, or differential privacy reduce this; none of them is enforced
+    by the framework.
 19. **Timing.** Wall-clock values come from a shared 3-core host; MPC party
     processes compete with each other and with Ray actors. Communication volume
     is MP-SPDZ's own count of party-to-party data (loopback), not a WAN

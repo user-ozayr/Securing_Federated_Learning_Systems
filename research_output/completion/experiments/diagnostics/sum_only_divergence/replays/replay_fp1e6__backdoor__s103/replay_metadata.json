@@ -1,0 +1,42 @@
+{
+  "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
+  "aggregation": "weighted_fedavg replaced in-process by round(float64(w)*n*S) per client, exact integer sum, float64(sum)/S/N cast to float32",
+  "scale": 1000000,
+  "source_config": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1/e1__baseline__backdoor__s103/config.yaml",
+  "source_config_sha256": "0eba89b7dd8f2319403d291ef93bf625e219ccb5dfe0a1648d9f5de6dc4dffe7",
+  "config_sha256": "92482a5e653dbcf028ea65f426becea68ef4c078056b585b4821c9f82d967865",
+  "compare_with": {
+    "spdz2k_sum_only": "e1/e1__smpc_only__backdoor__s103",
+    "fedavg": "e1/e1__baseline__backdoor__s103"
+  },
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty_tracked": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "pythonpath": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src",
+  "fl_security_module": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py",
+  "started_utc": "2026-11-20T21:52:19Z",
+  "status": "completed",
+  "aggregations_replaced": 10,
+  "analysis": {
+    "final_accuracy": 0.7183,
+    "final_loss": 0.8709726956367493,
+    "final_backdoor_asr": 0.7731111111111111,
+    "mean_deviation_from_honest_relative": 1.2037587394112235,
+    "mean_malicious_share_effective": 0.6261119100865951,
+    "mean_malicious_share_submitted": 0.6261119100865951,
+    "mean_reference_max_abs_error": 1.3709068298339843e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07,
+    "mean_reference_relative_error": 7.908373177203327e-08,
+    "max_reference_relative_error": 1.2125558563724881e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "wall_seconds": 95.811,
+  "finished_utc": "2026-11-20T21:53:55Z"
+}

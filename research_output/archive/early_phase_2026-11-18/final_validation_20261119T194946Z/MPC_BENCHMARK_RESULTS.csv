@@ -1,0 +1,8 @@
+parameter_count,clients,parties,protocol,status,cleanup_and_total_seconds,cpu_seconds_estimate_sum_parties,peak_party_rss_bytes_max,host_loopback_rx_delta_bytes,host_loopback_tx_delta_bytes,compile_duration_seconds,fixed_point_scale,max_numerical_error,detail
+8,3,3,MP-SPDZ SPDZ2k,PASS,19.661,8.02,306405376,492160378,492160378,,not recorded,not measured,Historical same-host loopback vector run
+1000,3,3,MP-SPDZ SPDZ2k,PASS,27.605,7.94,307453952,492215612,492215612,,not recorded,not measured,Historical same-host loopback vector run
+10000,3,3,MP-SPDZ SPDZ2k,FAILED,54.138,56.65,345427968,4551459253,4551459253,,not recorded,not measured,Initial attempt failed: unexpected data length
+10000,3,3,MP-SPDZ SPDZ2k,PASS,55.546,57.07,346669056,4551268121,4551268121,,not recorded,not measured,Corrected retry; historical same-host loopback run
+50000,3,3,MP-SPDZ SPDZ2k,PASS,141.997,272.26,369610752,21712685992,21712685992,,not recorded,not measured,Historical same-host loopback vector run
+100000,3,3,MP-SPDZ SPDZ2k,PASS,246.236,534.26,409812992,43399093013,43399093013,,not recorded,not measured,Historical same-host loopback vector run
+250000,3,3,MP-SPDZ SPDZ2k,ABORTED,301.461,686.16,407293952,59290526761,59290526761,,not recorded,not measured,300-second cap; not a successful protocol result

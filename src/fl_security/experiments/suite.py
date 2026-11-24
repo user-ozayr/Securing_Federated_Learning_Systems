@@ -220,10 +220,14 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int,
 
 
 def run_suite(output_root: Path, studies: list[str] | None, timeout_seconds: int,
-              max_runs: int | None = None, only_mpc: bool | None = None, dry_run: bool = False) -> None:
+              max_runs: int | None = None, only_mpc: bool | None = None, dry_run: bool = False,
+              conditions: list[str] | None = None) -> None:
     runs = all_runs(studies)
     if only_mpc is not None:
         runs = [run for run in runs if run.uses_mpc == only_mpc]
+    if conditions:
+        selected_conditions = set(conditions)
+        runs = [run for run in runs if run.condition in selected_conditions]
     progress = output_root / "suite_progress.jsonl"
     output_root.mkdir(parents=True, exist_ok=True)
     pairing_key = (load_pairing_key(output_root)

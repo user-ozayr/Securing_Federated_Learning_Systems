@@ -1,0 +1,16 @@
+base commit: 14b7bb541445a39cd9995ecec9cf4c085daabb8a
+ M run_suite.py
+ M src/fl_security/experiments/grid.py
+ M src/fl_security/experiments/suite.py
+?? research_output/completion/experiments/diagnostics/
+?? research_output/completion/experiments_pow2/
+?? research_output/completion/pow2_chain.sh
+?? research_output/completion/tools/sum_only_divergence.py
+?? research_output/completion/tools/sum_only_replay.py
+?? tests/test_sum_only_scale.py
+
+SHA-256 of modified and new source files:
+cf58e21ad1fe658e0ed37501de054eb9b4a87247e012095c20e9d76ec34e6260  run_suite.py
+9c00928d4d98c9f3b5677998f5758470bab6bc556f136062c90da1c68e4c85d3  src/fl_security/experiments/grid.py
+68e03e1052e81b805f4087da4d0a4a86d2a74946053d1aecda95261af72c33c3  src/fl_security/experiments/suite.py
+5d7f5d24065fd13270a492c751d42435f69953df5929479aabd3ba75b2989588  tests/test_sum_only_scale.py

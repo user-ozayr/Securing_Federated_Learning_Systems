@@ -124,15 +124,31 @@ Trajectory-level checks (`experiments/summaries/equivalence_checks.csv`):
   to the same ×4 scaling as the boosted backdoor. `e2__baseline__adaptive_backdoor`
   therefore reproduces `e1__baseline__backdoor` exactly for all three seeds.
 * **Sum-only SPDZ2k vs plaintext FedAvg.**
-  * Round 1 is identical.
-  * The fixed-point aggregate differs from float FedAvg by about 10⁻¹⁰, which is
-    below float32 resolution. However, occasional one-ulp differences after the
-    float32 cast are amplified by SGD.
-  * The maximum |Δ accuracy| over 10 rounds was 0.010–0.017 without attack, and
-    up to 0.19 (backdoor), 0.30 (label flip) and 0.51 (scaled replacement) under
-    attacks that make training chaotic.
+  * *Original runs, S = 10⁶: the trajectories differ from round 1.*
+    * Before the float32 cast, the fixed-point aggregate differs from float
+      FedAvg by at most 10⁻¹⁰, which is below float32 resolution.
+    * After the cast, 129–192 of the 2,202 parameters already differ by one ulp
+      in round 1. 97 % of all such differences are values that lie exactly
+      halfway between two float32 numbers, where the decimal scale rounds
+      differently from float arithmetic.
+    * SGD amplifies these differences. The recorded loss differs from round 1.
+      The maximum |Δ accuracy| over 10 rounds was 0.010–0.017 without attack,
+      and up to 0.19 (backdoor), 0.30 (label flip) and 0.51 (scaled
+      replacement) under attacks that make training chaotic.
+    * Diagnostic: `experiments/diagnostics/sum_only_divergence/`.
+  * *Rerun with a power-of-two scale, S = 2⁴⁰ (all 36 sum-only runs).* All 18
+    `smpc_only` runs equal the seed-matched FedAvg run in every recorded round
+    (loss, accuracy, ASR):
+    * 15 runs over all 10 rounds;
+    * the 3 sign-flip runs up to their fail-closed abort.
 
-  Per-seed comparisons of this path are therefore statistical, not identical.
+    Sources: `experiments_pow2/pow2_vs_fedavg.csv` (`tools/pow2_vs_fedavg.py`).
+    Provenance: `experiments_pow2/provenance.txt` lists the base commit and the
+    SHA-256 of every changed file.
+
+  Per-seed comparisons of `smpc_only` with `baseline` are therefore exact at
+  S = 2⁴⁰. Comparisons of `smpc_mtd` with `mtd_only` remain statistical,
+  because each run draws its own MTD secret and therefore its own cohorts.
 
 ## 5. Core comparison (E1)
 
@@ -153,16 +169,28 @@ round. Sources: `experiments/summaries/key_results.md`,
 |---|---|---|---|---|---|---|---|
 | baseline (FedAvg) | 0.823 ± 0.027 | 0.690 ± 0.089 | 0.114 ± 0.061 † | 0.136 ± 0.114 † | 0.813 ± 0.020 | 0.712 ± 0.074 | 0.921 ± 0.218 |
 | mtd_only | 0.830 ± 0.017 | 0.463 ± 0.098 | 0.099 ± 0.003 † | 0.179 ± 0.319 † | 0.806 ± 0.017 | 0.317 ± 0.672 | 0.306 ± 1.072 ‖ |
-| smpc_only (SPDZ2k sum) | 0.827 ± 0.028 | 0.670 ± 0.142 | 0.100 ± 0.000 †‡ | 0.272 ± 0.404 | 0.814 ± 0.014 | 0.727 ± 0.098 | 0.877 ± 0.223 |
-| smpc_mtd | 0.829 ± 0.003 | 0.564 ± 0.317 | 0.098 ± 0.009 †‡ | 0.094 ± 0.026 † | 0.813 ± 0.029 | 0.413 ± 0.499 | 0.317 ± 1.254 ‖ |
+| smpc_only (SPDZ2k sum) § | 0.823 ± 0.027 | 0.690 ± 0.089 | 0.096 ± 0.019 †‡ | 0.136 ± 0.114 † | 0.813 ± 0.020 | 0.712 ± 0.074 | 0.921 ± 0.218 |
+| smpc_mtd § | 0.824 ± 0.033 | 0.585 ± 0.571 | 0.247 ± 0.634 †‡ | 0.185 ± 0.324 † | 0.819 ± 0.005 | 0.494 ± 0.381 | 0.782 ± 0.475 |
 | smpc_clip (static τ = 4) | 0.828 ± 0.023 | 0.766 ± 0.051 | 0.812 ± 0.034 | 0.760 ± 0.091 | 0.830 ± 0.009 | 0.816 ± 0.018 | 0.467 ± 0.165 |
 | smpc_defence_mtd (full framework) | 0.830 ± 0.014 | 0.724 ± 0.386 | 0.821 ± 0.013 | 0.827 ± 0.017 | 0.817 ± 0.027 | 0.822 ± 0.014 | **0.017 ± 0.006** |
 
 * † Model destroyed: accuracy is about 0.1, and the ASR of such a model is not
   meaningful.
 * ‡ Includes fail-closed aborts. Five of the six sum-only SPDZ2k sign-flip runs
-  stopped after 2–4 rounds, when the clients' fixed-point encoder refused the
-  diverged model; their accuracy is that of the last completed rounds.
+  stopped when the clients' fixed-point encoder refused the diverged model: all
+  three `smpc_only` runs and two of the three `smpc_mtd` runs. At S = 2⁴⁰ the
+  encoder's safe range is smaller, so they stopped after 1–2 rounds (2–4 at
+  S = 10⁶). Their accuracy is that of the last completed rounds.
+* § Rerun with the power-of-two scale S = 2⁴⁰ (`experiments_pow2/`; §4).
+  * `smpc_only` equals `baseline` in every cell except sign flip, whose runs
+    stop earlier (‡).
+  * The original S = 10⁶ runs remain in `experiments/runs/e1/`. For
+    `smpc_only` they gave 0.827 ± 0.028 without attack and a backdoor ASR of
+    0.877 ± 0.223. For `smpc_mtd` they gave a backdoor ASR of 0.317 ± 1.254.
+  * `smpc_mtd` differs between the two sets for two reasons: the rounding, and
+    the cohorts, because each run draws a fresh MTD secret. With three seeds,
+    the MTD rows therefore carry a large run-to-run variance.
+  * `attack_defence_matrix.csv` still reflects the original runs.
 * ‖ The ASR is low because the model was ruined in some seeds, not because the
   backdoor was mitigated; the matrix verdict is *not mitigated*.
 
@@ -192,17 +220,18 @@ Findings:
 
 1. **No measurable clean-accuracy cost.** Without attack, every configuration
    reaches 0.823–0.830.
-2. **SPDZ2k alone does not stop poisoning.** Sum-only secure aggregation
-   reproduces FedAvg's failures: backdoor ASR 0.88 vs 0.92, and scaled
-   replacement and sign flip destroy the model. Under sign flip the diverging
+2. **SPDZ2k alone does not stop poisoning.** With the power-of-two scale,
+   sum-only secure aggregation reproduces FedAvg exactly, including its
+   failures (§4): backdoor ASR 0.92 in both, and scaled replacement and sign
+   flip destroy the model. Under sign flip the diverging
    model was eventually refused by the fixed-point encoder and the secure round
    aborted. This is fail-closed behaviour: integrity is preserved but
    availability is lost.
 3. **MTD alone is not a poisoning defence.** Against attackers that do not need
    to predict participation, random cohorts sometimes contain two or three
    boosted attackers. MTD-only and SMPC+MTD were *worse* than the static
-   baseline under the backdoor (accuracy 0.317 and 0.413, model ruined in some
-   seeds).
+   baseline under the backdoor (accuracy 0.317 and 0.494, model ruined in some
+   seeds; SMPC+MTD from the S = 2⁴⁰ rerun, 0.413 at S = 10⁶).
 4. **Secure static clipping (τ = 4) bounds magnitude attacks** (sign flip 0.812,
    scaled replacement 0.760) but only halves the backdoor (ASR 0.467): a clipped
    attacker keeps about a third (0.34) of the aggregate.
@@ -325,6 +354,36 @@ FL runs (E3: FedAvg without defence, ×4 backdoor, adversary budget 2, 3 seeds):
   0.5 with large seed-to-seed variance); that requires the in-MPC defence (E1).
 * E1's MTD-only results (§5) show the converse: against adversaries who do not
   depend on prediction, randomised cohorts alone do not help.
+
+## 7b. Update leakage to the coordinator (E6)
+
+Details, method and limits: `experiments/leakage/README.md`. The coordinator is
+honest but curious. It sees either the target client's update (plaintext
+FedAvg) or only the decoded SPDZ2k sum-only aggregate of the four-client cohort,
+computed with the protocol's own arithmetic. The setting is FedSGD: one local
+step on B ∈ {1, 2, 4, 8} images, 8 trials per cell, and an untrained and a
+one-epoch-trained model.
+
+| Attack | FedAvg view | SPDZ2k aggregate |
+|---|---|---|
+| Analytic input read-out, probe MLP (first layer fully connected); share of target images recovered near-exactly (SSIM ≥ 0.9) | 1.00 at B = 1; 0.66–0.80 at B = 8 | **0.75–1.00 at B = 1**; 0.03–0.28 at B = 8 |
+| Analytic feature read-out, CompactCNN (128-d input of the output layer); mean cosine | 1.000 at B = 1; 0.86–0.93 at B = 8 | 0.96–0.97 at B = 1; 0.73–0.89 at B = 8 |
+| Optimisation inversion, CompactCNN; mean SSIM | 0.25–0.33 at B = 1 | 0.18 at B = 1 |
+| Label read-out (output-bias update); precision | 1.00 | 0.29–0.71 (cohort labels, not attributable) |
+
+Findings:
+
+* **Secure aggregation reduces leakage but does not remove it.** Through a fully
+  connected layer, a hidden unit activated by only one image of the cohort
+  copies that image into the aggregate. With four clients and small batches, the
+  coordinator therefore still recovers individual training images exactly from
+  the SPDZ2k output, although it can no longer attribute them to a client.
+  Recovery degrades as the cohort holds more images.
+* **On the deployed CompactCNN**, optimisation-based inversion recovered no
+  recognisable image (no SSIM ≥ 0.5) from either view. This reflects the small
+  model, not a protection mechanism.
+* Not measured: multi-step local training, as used in E1–E5, and a malicious
+  coordinator that manipulates the model to isolate clients.
 
 ## 8. Overhead and scalability (B)
 
@@ -488,8 +547,11 @@ Fashion-MNIST, 12 clients with 4 per round, 10 rounds, 2–3 seeds):
 2. **Update confidentiality against the coordinator.** By construction and by
    test, the coordinator receives in SMPC mode only the aggregate and the
    declared metadata: threshold, clipped count and accept bits, plus clip flags
-   in the evaluation setting. This rests on the protocol and its tests; it is
-   not an empirical measurement.
+   in the evaluation setting. This rests on the protocol and its tests. E6
+   measures what that buys against a curious coordinator (§7b): label
+   attribution and most multi-image reconstructions are lost, but the aggregate
+   of a small cohort can still contain exact copies of individual training
+   images.
 3. **Secure aggregation alone does not defend against poisoning.**
 4. **A norm defence inside MPC does help.** It mitigated magnitude-based
    poisoning and a non-adaptive boosted backdoor in this setting without
@@ -517,8 +579,10 @@ Fashion-MNIST, 12 clients with 4 per round, 10 rounds, 2–3 seeds):
 4. Security across independent hosts or trust domains, WAN performance, or
    availability. The protocol provides security with abort only; 5
    attack-induced aborts and 1 infrastructure abort were observed.
-5. Differential privacy or resistance to inference attacks: neither is
-   implemented.
+5. Differential privacy or resistance to inference attacks. Neither is
+   implemented, and E6 shows that secure aggregation alone does not prevent
+   reconstruction of individual training images from the aggregate of a small
+   cohort. Membership and property inference were not evaluated.
 6. Feasibility for large models: the CIFAR CNN is only extrapolated.
 7. Small effects: with 2–3 seeds, differences below the 95 % interval widths
    cannot be resolved.

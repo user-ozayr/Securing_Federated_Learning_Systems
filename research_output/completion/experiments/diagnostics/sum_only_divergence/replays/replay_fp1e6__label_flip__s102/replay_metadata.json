@@ -1,0 +1,42 @@
+{
+  "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
+  "aggregation": "weighted_fedavg replaced in-process by round(float64(w)*n*S) per client, exact integer sum, float64(sum)/S/N cast to float32",
+  "scale": 1000000,
+  "source_config": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1/e1__baseline__label_flip__s102/config.yaml",
+  "source_config_sha256": "83176f62c8afa81143b57b864f05094c3e07c5492214b49c38b84a196799455a",
+  "config_sha256": "f42165d7beaab5b5f3fe9ff360e0480417619ce1cda843f425c5a713c5e77c99",
+  "compare_with": {
+    "spdz2k_sum_only": "e1/e1__smpc_only__label_flip__s102",
+    "fedavg": "e1/e1__baseline__label_flip__s102"
+  },
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty_tracked": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "pythonpath": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src",
+  "fl_security_module": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py",
+  "started_utc": "2026-11-20T21:44:56Z",
+  "status": "completed",
+  "aggregations_replaced": 10,
+  "analysis": {
+    "final_accuracy": 0.7676,
+    "final_loss": 0.7915549103736877,
+    "final_backdoor_asr": 0.01988888888888889,
+    "mean_deviation_from_honest_relative": 0.666963680839436,
+    "mean_malicious_share_effective": 0.4149692747823658,
+    "mean_malicious_share_submitted": 0.4149692747823658,
+    "mean_reference_max_abs_error": 7.748603820800782e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.2743822146538503e-07,
+    "max_reference_relative_error": 1.8274624579262495e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "wall_seconds": 96.128,
+  "finished_utc": "2026-11-20T21:46:32Z"
+}

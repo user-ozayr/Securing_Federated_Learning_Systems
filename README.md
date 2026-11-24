@@ -9,7 +9,9 @@ adaptive, median-based threshold; see `docs/secure_robust_aggregation.md`).
 Entry points: `run_experiment.py` (one run), `run_suite.py` (evaluation grid),
 `analyze_suite.py` (tables/figures), `run_mpc_validation.py` (SPDZ2k vs exact
 reference), `run_mpc_benchmark.py` (SPDZ2k cost), `run_mtd_exposure.py`
-(schedule predictability). Setup and reproduction: `docs/reproduction.md`.
+(schedule predictability), `run_leakage_study.py` (gradient inversion against
+individual updates vs the SPDZ2k aggregate). Setup and reproduction:
+`docs/reproduction.md`.
 Completion evidence and reports: `research_output/completion/`.
 
 ## Requirements and local demonstration
@@ -218,5 +220,8 @@ or `@`) while preserving numeric values.
 The optional plaintext robust-update module scores client updates using
 distance from the cohort median, cosine alignment, update norm, and temporal
 consistency. It is a research integrity layer, not a poisoning guarantee, and
-is unavailable with SPDZ2k. Differential privacy, membership inference,
-property inference, and gradient inversion are outside the current evaluation.
+is unavailable with SPDZ2k. Differential privacy, membership inference and
+property inference are outside the current evaluation. Gradient inversion was
+measured for single-step updates (E6): secure aggregation hides which client an
+image came from, but the aggregate of a small cohort can still contain exact
+copies of individual training images.

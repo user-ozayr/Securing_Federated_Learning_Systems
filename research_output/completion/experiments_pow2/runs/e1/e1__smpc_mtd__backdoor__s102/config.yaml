@@ -1,0 +1,38 @@
+attacks:
+  attack_type: backdoor
+  backdoor:
+    poison_fraction: 0.5
+    target_label: 0
+    trigger_size: 4
+  boost: 4.0
+  enabled: true
+  num_malicious: 3
+  placement: stratified
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-sum-only-correction/research_output/completion/experiments_pow2/runs/e1/e1__smpc_mtd__backdoor__s102
+  save_csv: true
+  save_plots: false
+experiment:
+  name: e1__smpc_mtd__backdoor__s102
+  rounds: 10
+  seed: 102
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.34
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: secret
+smpc:
+  backend: mp_spdz_spdz2k
+  enabled: true
+  fixed_point_scale: 1099511627776
+  min_clients_per_round: 2
+  num_aggregation_parties: 3
