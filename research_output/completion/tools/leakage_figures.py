@@ -11,10 +11,10 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import matplotlib.ticker as ticker  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib import ticker
 
 VIEWS = {  # fixed colour per view, independent of plotting order
     "individual": ("FedAvg: individual update", "#2a78d6"),

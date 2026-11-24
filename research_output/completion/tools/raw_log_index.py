@@ -1,8 +1,7 @@
 """Write experiments/raw_logs/INDEX.md: where every raw log of the evaluation is.
 
 Raw logs stay next to the artefact they belong to (a run, an archived attempt,
-a validation scenario, a benchmark party). This index lists them with their
-status so that nothing has to be duplicated.
+a validation scenario, a benchmark party). The index records their paths and statuses without copying the logs.
 
 Usage: python raw_log_index.py <completion_root>
 """
@@ -13,7 +12,7 @@ import sys
 from pathlib import Path
 
 
-def rel(path: Path, root: Path) -> str:
+def relative_path(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
@@ -36,7 +35,7 @@ def main() -> None:
         "",
     ]
     for path in sorted(experiments.glob("*.log")) + sorted(root.glob("*.log")):
-        lines.append(f"* `{rel(path, root)}` ({path.stat().st_size:,} bytes)")
+        lines.append(f"* `{relative_path(path, root)}` ({path.stat().st_size:,} bytes)")
 
     lines += ["", "## Experiment runs (one `run.log` per run)", "",
               "| Study | Run | Status | Commit | Log |", "|---|---|---|---|---|"]
@@ -47,7 +46,7 @@ def main() -> None:
         counts[status] = counts.get(status, 0) + 1
         log = metadata_path.parent / "run.log"
         lines.append(f"| {metadata.get('study')} | {metadata.get('run_id')} | {status} | "
-                     f"{str(metadata.get('git_commit', ''))[:7]} | `{rel(log, root)}` |")
+                     f"{str(metadata.get('git_commit', ''))[:7]} | `{relative_path(log, root)}` |")
     lines.insert(lines.index("## Experiment runs (one `run.log` per run)") + 1,
                  "\nStatus counts: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) + ".")
 
@@ -58,14 +57,14 @@ def main() -> None:
         archive = metadata_path.parents[2].name
         log = metadata_path.parent / "run.log"
         lines.append(f"| {archive} | {metadata.get('study')} | {metadata.get('run_id')} | "
-                     f"{metadata.get('status')} | `{rel(log, root)}` |")
+                     f"{metadata.get('status')} | `{relative_path(log, root)}` |")
     for reason in sorted(experiments.glob("failed_attempts/*/*/REASON.txt")):
-        lines.append(f"\nReason note: `{rel(reason, root)}`")
+        lines.append(f"\nReason note: `{relative_path(reason, root)}`")
 
     lines += ["", "## SPDZ2k validation scenarios", ""]
     for path in sorted((experiments / "mpc_validation").rglob("*")):
         if path.is_file() and path.suffix in {".log", ".txt", ".json", ".csv"}:
-            lines.append(f"* `{rel(path, root)}`")
+            lines.append(f"* `{relative_path(path, root)}`")
 
     benchmark_logs = sorted((root / "benchmarks" / "raw_logs").glob("*"))
     lines += ["", "## Benchmarks", "",
@@ -77,7 +76,7 @@ def main() -> None:
         lines += ["", "## Independent validation (fresh clone)", ""]
         for path in sorted(validation.rglob("*")):
             if path.is_file() and path.suffix in {".log", ".txt"}:
-                lines.append(f"* `{rel(path, root)}`")
+                lines.append(f"* `{relative_path(path, root)}`")
     (out_dir / "INDEX.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {out_dir / 'INDEX.md'} ({sum(counts.values())} runs)")
 

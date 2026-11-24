@@ -16,14 +16,14 @@ the setting most favourable to the attacker). Three attacks are used:
 from __future__ import annotations
 
 import copy
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
-from typing import Iterator, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.data import DataLoader
 
 from fl_security.attacks.gradient_inversion import (
@@ -41,7 +41,7 @@ from fl_security.federated.training import evaluate_model, train_local
 from fl_security.smpc.fixed_point import FixedPointEncoder
 from fl_security.smpc.mp_spdz import _encode_weighted_model
 
-# torchvision normalisation used by load_dataset
+# Match the normalisation used by load_dataset.
 NORMALISATION = {"fashion_mnist": (0.2860, 0.3530), "mnist": (0.1307, 0.3081)}
 METRICS = ("ssim", "psnr", "feature_cosine", "recognisable", "label_precision", "label_recall",
            "gradient_loss")
@@ -138,7 +138,7 @@ def _delta(after: Mapping[str, torch.Tensor], before: Mapping[str, torch.Tensor]
 
 
 def _label_scores(candidates: list[int], labels: Sequence[int]) -> tuple[float, float]:
-    truth = set(int(x) for x in labels)
+    truth = {int(x) for x in labels}
     hits = len(truth & set(candidates))
     precision = hits / len(candidates) if candidates else 0.0
     return precision, hits / len(truth)

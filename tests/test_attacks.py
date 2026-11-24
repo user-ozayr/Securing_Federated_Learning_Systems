@@ -1,12 +1,11 @@
 import torch
 import numpy as np
-import pytest
 from fl_security.attacks.label_flip import apply_label_flip
 from fl_security.attacks.sign_flip import apply_sign_flip
 
 def test_label_flip_default():
     labels = np.array([0, 1, 9])
-    # Default mapping: i -> (i + 1) % 10 => 0->1, 1->2, 9->0
+    # Each label advances modulo 10, so label 9 wraps to 0.
     flipped = apply_label_flip(labels, num_classes=10)
     expected = np.array([1, 2, 0])
     np.testing.assert_array_equal(flipped, expected)
@@ -21,7 +20,7 @@ def test_label_flip_custom():
 def test_sign_flip_basic():
     state_dict = {
         "weight": torch.tensor([1.0, -2.0, 3.0]),
-        "count": torch.tensor([5])  # integer tensor should remain unchanged
+        "count": torch.tensor([5])  # Integer tensors are left unchanged.
     }
     flipped = apply_sign_flip(state_dict, strength=1.0)
     

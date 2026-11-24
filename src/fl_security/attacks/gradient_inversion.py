@@ -10,12 +10,12 @@ sign of the last-layer bias update (Zhao et al. 2020, iDLG).
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Sequence
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,9 @@ class InversionSettings:
 class InversionResult:
     images: torch.Tensor          # reconstructed images in normalised space
     gradient_loss: float          # 1 - cosine similarity at the end of the best restart
+
+
+_DEFAULT_INVERSION_SETTINGS = InversionSettings()
 
 
 def label_candidates(bias_delta: torch.Tensor) -> list[int]:
@@ -79,7 +82,7 @@ def invert_update(
     labels: torch.Tensor,
     image_shape: tuple[int, int, int],
     pixel_range: tuple[float, float],
-    settings: InversionSettings = InversionSettings(),
+    settings: InversionSettings = _DEFAULT_INVERSION_SETTINGS,
     seed: int = 0,
 ) -> InversionResult:
     """Reconstruct ``len(labels)`` images whose gradient matches ``delta``."""

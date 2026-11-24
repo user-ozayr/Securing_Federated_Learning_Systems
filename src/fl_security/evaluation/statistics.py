@@ -18,7 +18,13 @@ _T975 = {
 
 def summarize_values(values: Iterable[float]) -> dict[str, float | int]:
     """Return n, mean, sample std and a two-sided 95% Student-t interval."""
-    clean = [float(value) for value in values if value is not None and math.isfinite(float(value))]
+    clean = []
+    for value in values:
+        if value is None:
+            continue
+        numeric_value = float(value)
+        if math.isfinite(numeric_value):
+            clean.append(numeric_value)
     count = len(clean)
     if count == 0:
         return {

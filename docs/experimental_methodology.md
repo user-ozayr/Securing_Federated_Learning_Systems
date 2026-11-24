@@ -74,6 +74,7 @@ response (reference level).
 * **E5 non-IID** (2 seeds): Dirichlet α = 0.5, secret MTD, and sample-weighted
   robust aggregation with 2-bit weights and `clip_bits = 6`. These parameters
   keep the output-check margin; 3-bit weights violate it.
+
 * **E6 update leakage** (`run_leakage_study.py`, outside the suite): a curious
   coordinator attacks either the target client's update (plaintext FedAvg) or the
   decoded SPDZ2k sum-only aggregate of the four-client cohort. The setting is one
@@ -88,6 +89,7 @@ response (reference level).
   target's images. Unlike the suite runs, E6 ran from an uncommitted tree; each
   shard's metadata records the SHA-256 of every source file. Details:
   `research_output/completion/experiments/leakage/README.md`.
+
 
 ## Metrics
 
@@ -154,5 +156,5 @@ all limitations are in `research_output/completion/`:
 The earlier integrated Flower run was a same-host, one-round smoke test with a
 synthetic 8-parameter model; direct production-circuit profiling completed up to
 100,000 parameters (246 s) and a 250k run reached a 300 s watchdog. Those
-records remain in `research_output/runtime_optimization/` and
-`research_output/scalability_phase/` and are not re-labelled.
+records remain in `research_output/archive/early_phase_2026-11-18/runtime_optimization/` and
+`research_output/archive/early_phase_2026-11-18/scalability_phase/` and are not re-labelled.

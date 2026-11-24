@@ -1,8 +1,8 @@
 """E6 update-leakage study: what the coordinator can reconstruct, FedAvg vs SPDZ2k.
 
-    # one process
+    # Run as one process.
     python run_leakage_study.py --output-dir research_output/completion/experiments/leakage/evaluation
-    # or three shards in parallel, then merge
+    # Or run three shards in parallel and merge their results.
     python run_leakage_study.py --output-dir DIR --shard 0 --num-shards 3   (and 1, 2)
     python run_leakage_study.py --output-dir DIR --merge
 """
@@ -46,17 +46,17 @@ SOURCES = (
 ATTACKS = ("optimisation", "fc_features", "fc_input")
 
 
-def _git(*args: str) -> str:
+def _git_output(*args: str) -> str:
     result = subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True,
                             check=False)
     return result.stdout.strip()
 
 
-def _metadata(cfg: LeakageConfig, args) -> dict:
+def _build_run_metadata(cfg: LeakageConfig, args) -> dict:
     return {
         "study": "e6_update_leakage",
-        "git_commit": _git("rev-parse", "HEAD"),
-        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "git_commit": _git_output("rev-parse", "HEAD"),
+        "git_dirty": bool(_git_output("status", "--porcelain", "--untracked-files=no")),
         "source_sha256": {p: hashlib.sha256((REPO_ROOT / p).read_bytes()).hexdigest()
                           for p in SOURCES},
         "python": platform.python_version(), "torch": torch.__version__,
@@ -66,7 +66,7 @@ def _metadata(cfg: LeakageConfig, args) -> dict:
     }
 
 
-def _write_summary(output: Path, raw: pd.DataFrame, cfg: LeakageConfig) -> None:
+def _write_leakage_summary(output: Path, raw: pd.DataFrame, cfg: LeakageConfig) -> None:
     summary = summarise(raw, cfg.recognisable_ssim)
     sanitize_csv_dataframe(summary).to_csv(output / "leakage_summary.csv", index=False)
     table = summary[summary["metric"].isin(["ssim", "feature_cosine", "label_recall"])]
@@ -74,7 +74,7 @@ def _write_summary(output: Path, raw: pd.DataFrame, cfg: LeakageConfig) -> None:
                             columns="metric", values="mean").round(3).to_string())
 
 
-def merge(output: Path, cfg: LeakageConfig) -> None:
+def merge_shards(output: Path, cfg: LeakageConfig) -> None:
     shards = sorted(path for path in output.glob("shard_*") if path.is_dir())
     if not shards:
         raise SystemExit(f"no shard directories in {output}")
@@ -86,7 +86,7 @@ def merge(output: Path, cfg: LeakageConfig) -> None:
         with np.load(shard / "leakage_examples.npz") as data:
             examples.update({k: data[k] for k in data.files})
     np.savez_compressed(output / "leakage_examples.npz", **examples)
-    _write_summary(output, raw, cfg)
+    _write_leakage_summary(output, raw, cfg)
 
 
 def main() -> None:
@@ -119,12 +119,12 @@ def main() -> None:
                                                     tv_weight=args.tv_weight))
     output = Path(args.output_dir)
     if args.merge:
-        merge(output, cfg)
+        merge_shards(output, cfg)
         return
     if args.num_shards > 1:
         output = output / f"shard_{args.shard}"
     output.mkdir(parents=True, exist_ok=True)
-    metadata = _metadata(cfg, args)
+    metadata = _build_run_metadata(cfg, args)
     metadata["started_unix"] = time.time()
     partitions, models, info = prepare_models(cfg, args.data_root)
     metadata.update(info)
@@ -148,7 +148,7 @@ def main() -> None:
     metadata["elapsed_seconds"] = metadata["finished_unix"] - metadata["started_unix"]
     (output / "run_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     if args.num_shards == 1:
-        _write_summary(output, pd.DataFrame(rows), cfg)
+        _write_leakage_summary(output, pd.DataFrame(rows), cfg)
 
 
 if __name__ == "__main__":

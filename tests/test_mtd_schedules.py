@@ -45,9 +45,9 @@ def test_secret_schedule_requires_secret_and_differs_from_public(monkeypatch):
         MTDController(_config("secret"))
     monkeypatch.setenv("FL_MTD_SECRET", SECRET)
     secret_a = _cohorts(_config("secret"), rounds=20)
-    assert secret_a == _cohorts(_config("secret"), rounds=20)        # reproducible with the secret
+    assert secret_a == _cohorts(_config("secret"), rounds=20)        # The same secret produces the same schedule.
     monkeypatch.setenv("FL_MTD_SECRET", "t" * 48)
-    assert _cohorts(_config("secret"), rounds=20) != secret_a          # depends on the secret
+    assert _cohorts(_config("secret"), rounds=20) != secret_a          # A different secret changes the schedule.
     assert MTDController(_config("secret")).generate_round_config(1, 12, 0.34)["secret_seeded"]
 
 

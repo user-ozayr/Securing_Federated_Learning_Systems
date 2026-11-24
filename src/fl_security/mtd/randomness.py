@@ -22,7 +22,7 @@ class HMACCounterRNG:
         self._counter = 0
         self._buffer = bytearray()
 
-    def _read(self, count: int) -> bytes:
+    def _read_bytes(self, count: int) -> bytes:
         if isinstance(count, bool) or not isinstance(count, int) or count < 0:
             raise ValueError("byte count must be a non-negative integer")
         while len(self._buffer) < count:
@@ -47,7 +47,7 @@ class HMACCounterRNG:
         span = 1 << (8 * width)
         limit = span - (span % upper)
         while True:
-            candidate = int.from_bytes(self._read(width), "big")
+            candidate = int.from_bytes(self._read_bytes(width), "big")
             if candidate < limit:
                 return candidate % upper
 
