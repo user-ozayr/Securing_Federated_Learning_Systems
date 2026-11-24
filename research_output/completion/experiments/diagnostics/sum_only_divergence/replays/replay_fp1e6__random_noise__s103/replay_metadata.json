@@ -1,0 +1,42 @@
+{
+  "purpose": "plaintext diagnostic replay of the sum-only SPDZ2k arithmetic; not a secure run",
+  "aggregation": "weighted_fedavg replaced in-process by round(float64(w)*n*S) per client, exact integer sum, float64(sum)/S/N cast to float32",
+  "scale": 1000000,
+  "source_config": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/research_output/completion/experiments/runs/e1/e1__baseline__random_noise__s103/config.yaml",
+  "source_config_sha256": "09f32857334cc02b3ae27c4ba26e97145ad826f4222ca1484c4c055fc841add0",
+  "config_sha256": "e5a560536b969d9884f6de3a6c9da4ba9b1b00b45b2642b6d61cedbb135bada8",
+  "compare_with": {
+    "spdz2k_sum_only": "e1/e1__smpc_only__random_noise__s103",
+    "fedavg": "e1/e1__baseline__random_noise__s103"
+  },
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty_tracked": false,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "pythonpath": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src",
+  "fl_security_module": "/home/ubuntu/gemini/fl-security-research-spdz2k-thesis/src/fl_security/federated/flower_simulation.py",
+  "started_utc": "2026-11-20T21:56:01Z",
+  "status": "completed",
+  "aggregations_replaced": 10,
+  "analysis": {
+    "final_accuracy": 0.8237,
+    "final_loss": 0.49482420892715456,
+    "final_backdoor_asr": 0.02288888888888889,
+    "mean_deviation_from_honest_relative": 1.0085988273636812,
+    "mean_malicious_share_effective": 0.5631145972721885,
+    "mean_malicious_share_submitted": 0.5631145972721885,
+    "mean_reference_max_abs_error": 1.1771917343139649e-07,
+    "max_reference_max_abs_error": 2.384185791015625e-07,
+    "mean_reference_relative_error": 1.0484048368640625e-07,
+    "max_reference_relative_error": 1.5598712656885305e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "wall_seconds": 96.021,
+  "finished_utc": "2026-11-20T21:57:37Z"
+}

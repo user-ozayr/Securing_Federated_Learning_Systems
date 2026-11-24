@@ -43,6 +43,14 @@ SMPC = {
     "num_aggregation_parties": 3,
     "min_clients_per_round": 2,
 }
+# Sum-only aggregation uses a power-of-two scale. With S = 10^6 the decoded
+# average rounds differently from float FedAvg at float32 ties, and SGD amplifies
+# those one-ulp differences (diagnostics/sum_only_divergence); with S = 2^40 the
+# same arithmetic reproduced FedAvg bit for bit. The encoder's ring guard
+# (2^62 / num_clients) then admits |w| < ~70 for 5,000 samples and 12 clients;
+# larger, diverged weights abort the round (fail-closed). The robust program has
+# its own scale 2^f and is unaffected.
+SMPC_SUM_ONLY = dict(SMPC, fixed_point_scale=1 << 40)
 
 # Static public clipping bound: above the steady-state honest update norm
 # (~3.1-3.9 in calibration) so that honest clients are rarely clipped after round 2.
@@ -67,9 +75,9 @@ CONFIGS = {
     # name: (description, overrides)
     "baseline": ("FedAvg, plaintext, static participation", {}),
     "mtd_only": ("FedAvg, plaintext, secret-derived MTD", {"mtd": {"schedule": "secret"}}),
-    "smpc_only": ("SPDZ2k sum-only aggregation, static participation", {"smpc": SMPC}),
+    "smpc_only": ("SPDZ2k sum-only aggregation, static participation", {"smpc": SMPC_SUM_ONLY}),
     "smpc_mtd": ("SPDZ2k sum-only aggregation, secret-derived MTD",
-                 {"smpc": SMPC, "mtd": {"schedule": "secret"}}),
+                 {"smpc": SMPC_SUM_ONLY, "mtd": {"schedule": "secret"}}),
     "smpc_clip": ("SPDZ2k + secure L2 clipping (static public bound)",
                   {"smpc": dict(SMPC, defence=CLIP_STATIC)}),
     "smpc_defence_mtd": ("SPDZ2k + secure adaptive clip+screen + secret MTD (full framework)",

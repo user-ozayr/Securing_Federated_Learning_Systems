@@ -1,0 +1,69 @@
+diff --git a/run_suite.py b/run_suite.py
+index d3444b5..9bb8a07 100644
+--- a/run_suite.py
++++ b/run_suite.py
+@@ -23,10 +23,13 @@ def main() -> None:
+     parser.add_argument("--max-runs", type=int, default=None)
+     parser.add_argument("--mpc", choices=["only", "none"], default=None,
+                         help="restrict to SPDZ2k runs or to plaintext runs")
++    parser.add_argument("--conditions", nargs="*", default=None,
++                        help="restrict to these configuration names (e.g. smpc_only smpc_mtd)")
+     parser.add_argument("--dry-run", action="store_true")
+     args = parser.parse_args()
+     only_mpc = None if args.mpc is None else args.mpc == "only"
+-    run_suite(Path(args.output_root), args.studies, args.timeout, args.max_runs, only_mpc, args.dry_run)
++    run_suite(Path(args.output_root), args.studies, args.timeout, args.max_runs, only_mpc,
++              args.dry_run, args.conditions)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/fl_security/experiments/grid.py b/src/fl_security/experiments/grid.py
+index be636fc..b904870 100644
+--- a/src/fl_security/experiments/grid.py
++++ b/src/fl_security/experiments/grid.py
+@@ -43,6 +43,14 @@ SMPC = {
+     "num_aggregation_parties": 3,
+     "min_clients_per_round": 2,
+ }
++# Sum-only aggregation uses a power-of-two scale. With S = 10^6 the decoded
++# average rounds differently from float FedAvg at float32 ties, and SGD amplifies
++# those one-ulp differences (diagnostics/sum_only_divergence); with S = 2^40 the
++# same arithmetic reproduced FedAvg bit for bit. The encoder's ring guard
++# (2^62 / num_clients) then admits |w| < ~70 for 5,000 samples and 12 clients;
++# larger, diverged weights abort the round (fail-closed). The robust program has
++# its own scale 2^f and is unaffected.
++SMPC_SUM_ONLY = dict(SMPC, fixed_point_scale=1 << 40)
+ 
+ # Static public clipping bound: above the steady-state honest update norm
+ # (~3.1-3.9 in calibration) so that honest clients are rarely clipped after round 2.
+@@ -67,9 +75,9 @@ CONFIGS = {
+     # name: (description, overrides)
+     "baseline": ("FedAvg, plaintext, static participation", {}),
+     "mtd_only": ("FedAvg, plaintext, secret-derived MTD", {"mtd": {"schedule": "secret"}}),
+-    "smpc_only": ("SPDZ2k sum-only aggregation, static participation", {"smpc": SMPC}),
++    "smpc_only": ("SPDZ2k sum-only aggregation, static participation", {"smpc": SMPC_SUM_ONLY}),
+     "smpc_mtd": ("SPDZ2k sum-only aggregation, secret-derived MTD",
+-                 {"smpc": SMPC, "mtd": {"schedule": "secret"}}),
++                 {"smpc": SMPC_SUM_ONLY, "mtd": {"schedule": "secret"}}),
+     "smpc_clip": ("SPDZ2k + secure L2 clipping (static public bound)",
+                   {"smpc": dict(SMPC, defence=CLIP_STATIC)}),
+     "smpc_defence_mtd": ("SPDZ2k + secure adaptive clip+screen + secret MTD (full framework)",
+diff --git a/src/fl_security/experiments/suite.py b/src/fl_security/experiments/suite.py
+index d28ca4d..5bbeaf6 100644
+--- a/src/fl_security/experiments/suite.py
++++ b/src/fl_security/experiments/suite.py
+@@ -176,10 +176,13 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
+ 
+ 
+ def run_suite(output_root: Path, studies: list[str] | None, timeout_seconds: int,
+-              max_runs: int | None = None, only_mpc: bool | None = None, dry_run: bool = False) -> None:
++              max_runs: int | None = None, only_mpc: bool | None = None, dry_run: bool = False,
++              conditions: list[str] | None = None) -> None:
+     runs = all_runs(studies)
+     if only_mpc is not None:
+         runs = [run for run in runs if run.uses_mpc == only_mpc]
++    if conditions:
++        runs = [run for run in runs if run.condition in set(conditions)]
+     progress = output_root / "suite_progress.jsonl"
+     output_root.mkdir(parents=True, exist_ok=True)
+     executed = 0
