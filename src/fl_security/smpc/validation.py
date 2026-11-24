@@ -45,6 +45,9 @@ class Scenario:
     expect_output_check: bool = True
     weights_override: list[int] | None = None
     notes: dict = field(default_factory=dict)
+    # direction screen: {"min_agree": int, "indices": [...]} or None
+    direction: dict | None = None
+    expected_direction_failed: list[int] | None = None
 
 
 def _vector(norm: float, dimension: int, scale: int, rng: random.Random, sign: float = 1.0) -> list[int]:
@@ -53,7 +56,8 @@ def _vector(norm: float, dimension: int, scale: int, rng: random.Random, sign: f
     return [int(round(sign * norm * v / length * scale)) for v in raw]
 
 
-def _ideal_reference(scenario: Scenario, weights: list[int], threshold_norm: float) -> list[float]:
+def _ideal_reference(scenario: Scenario, weights: list[int], threshold_norm: float,
+                     direction_failed: list[int] | None = None) -> list[float]:
     """Floating-point clipping/screening on the decoded honest-format inputs."""
     cfg = scenario.config
     scale = float(cfg.scale)
@@ -62,8 +66,9 @@ def _ideal_reference(scenario: Scenario, weights: list[int], threshold_norm: flo
     rho = math.sqrt(cfg.screen_multiplier_squared)
     total = [0.0] * len(rows[0])
     accepted_weight = 0
-    for row, norm, weight in zip(rows, norms, weights):
-        if norm > cfg.max_valid_norm:
+    failed = direction_failed or [0] * len(rows)
+    for row, norm, weight, dropped in zip(rows, norms, weights, failed):
+        if norm > cfg.max_valid_norm or dropped:
             continue
         if cfg.screen_enabled and norm > rho * threshold_norm:
             continue
@@ -170,7 +175,65 @@ def build_scenarios(dimension: int = 300, seed: int = 7) -> list[Scenario]:
             f"two colluders inject a norm-{delta_norm:.2f} update (bound 1.0) via cancelling 2^32 multiples",
             cfg, [500] * clients, honest_rows + [x_a, x_b],
             expect_output_check=None, notes={"injected_norm": delta_norm}))
+    scenarios.extend(build_direction_scenarios(dimension, rng))
     return scenarios
+
+
+def build_direction_scenarios(dimension: int, rng: random.Random) -> list[Scenario]:
+    """Scenarios for the direction screen (sign agreement on a coordinate subset)."""
+    cfg = SecureDefenceConfig(
+        mode="clip_screen", threshold="adaptive", median_multiplier_squared=1,
+        screen_multiplier_squared=4, min_norm=0.05, max_norm=4.0,
+        direction_check=True, direction_subset="secret", direction_fraction=0.25,
+        direction_min_agreement=0.5,
+    )
+    s = cfg.scale
+    subset = sorted(rng.sample(range(dimension), max(1, dimension // 4)))
+    spec = {"min_agree": cfg.min_agreement_count(len(subset)), "indices": subset}
+    common = [rng.gauss(0.0, 1.0) for _ in range(dimension)]
+
+    def aligned(norm: float, noise: float = 0.6, sign: float = 1.0) -> list[int]:
+        """An update along a shared direction plus individual noise (honest-like)."""
+        raw = [c + noise * rng.gauss(0.0, 1.0) for c in common]
+        length = math.sqrt(sum(v * v for v in raw)) or 1.0
+        return [int(round(sign * norm * v / length * s)) for v in raw]
+
+    malformed = aligned(0.5, sign=-1.0)
+    for position, j in enumerate(subset[:12]):
+        # values beyond the 32-bit sign test: 2^31, 2^40 (+/-), ring negatives
+        malformed[j] = [1 << 31, (1 << 40) + 5, -(1 << 40), RING_MODULUS - 7][position % 4]
+    whole = {"min_agree": cfg.min_agreement_count(dimension), "indices": list(range(dimension))}
+    k3 = {"min_agree": spec["min_agree"], "indices": subset}
+    eight = [aligned(0.5) for _ in range(6)] + [aligned(0.5, sign=-1.0) for _ in range(2)]
+    return [
+        Scenario("direction_honest", "four aligned honest updates: none rejected by direction",
+                 cfg, [500] * 4, [aligned(n) for n in (0.4, 0.5, 0.6, 0.55)],
+                 direction=spec, expected_direction_failed=[0, 0, 0, 0]),
+        Scenario("direction_sign_flip",
+                 "three aligned honest updates and one sign-flipped update of honest norm",
+                 cfg, [500] * 4, [aligned(n) for n in (0.4, 0.5, 0.6)] + [aligned(0.5, sign=-1.0)],
+                 direction=spec, expected_direction_failed=[0, 0, 0, 1]),
+        Scenario("direction_and_norm",
+                 "one boosted update (norm screen) and one flipped update (direction screen)",
+                 cfg, [500] * 5,
+                 [aligned(n) for n in (0.4, 0.5, 0.6)] + [aligned(10.0), aligned(0.5, sign=-1.0)],
+                 direction=spec, expected_direction_failed=[0, 0, 0, 0, 1]),
+        Scenario("direction_malformed_signs",
+                 "flipped update with ring values beyond 32 bits on checked coordinates",
+                 cfg, [500] * 4, [aligned(n) for n in (0.4, 0.5, 0.6)] + [malformed],
+                 direction=spec, expect_output_check=None),
+        Scenario("direction_all_coordinates", "every coordinate checked",
+                 cfg, [500] * 4, [aligned(n) for n in (0.4, 0.5, 0.6)] + [aligned(0.5, sign=-1.0)],
+                 direction=whole, expected_direction_failed=[0, 0, 0, 1]),
+        Scenario("direction_three_clients_ties",
+                 "K = 3: two others, ties resolve to non-negative",
+                 cfg, [500] * 3, [aligned(0.5), aligned(0.5), aligned(0.5, sign=-1.0)],
+                 direction=k3),
+        Scenario("direction_k8_two_flipped",
+                 "K = 8 with two flipped updates: both are a minority and rejected",
+                 cfg, [500] * 8, eight, direction=spec,
+                 expected_direction_failed=[0] * 6 + [1, 1]),
+    ]
 
 
 def _colluding_delta(dimension: int, scale: int, rng: random.Random) -> tuple[list[int], int]:
@@ -234,12 +297,19 @@ def _run_one(scenario, parties, hosts, port, credentials, home, output_client_id
     client_ids = list(range(client_count))
     weights = scenario.weights_override or cfg.quantized_weights(scenario.counts)
     spec = cfg.round_spec(weights)
-    reference = robust_reference(scenario.inputs, weights, spec)
+    direction = scenario.direction
+    if direction is not None:
+        reference = robust_reference(scenario.inputs, weights, spec,
+                                     direction_indices=direction["indices"],
+                                     min_agree=direction["min_agree"])
+    else:
+        reference = robust_reference(scenario.inputs, weights, spec)
     round_id = f"validate-{scenario.name}-{uuid.uuid4().hex[:16]}"
     started = time.perf_counter()
     mp_spdz.start_round(
         parties, round_id, client_ids, dimension + 1, scenario.counts, output_client_id, port,
         program="robust_aggregate", weights=weights, robust_spec=spec, chunk_size=cfg.chunk_size,
+        direction=direction,
     )
     try:
         for cid, row, count in zip(client_ids, scenario.inputs, scenario.counts):
@@ -251,6 +321,7 @@ def _run_one(scenario, parties, hosts, port, credentials, home, output_client_id
         mpc = mp_spdz.receive_robust_result(
             hosts=hosts, port_base=port, credentials_dir=credentials, mp_spdz_home=home,
             output_client_id=output_client_id, client_count=client_count, dimension=dimension,
+            direction=direction is not None,
         )
         statistics = mp_spdz.finish_round(parties, round_id)
     except BaseException:
@@ -268,11 +339,20 @@ def _run_one(scenario, parties, hosts, port, credentials, home, output_client_id
         and mpc.accepted == reference.accepted
         and mpc.clip_flags == reference.clip_flags
         and mpc.totals == reference.totals
+        and mpc.direction_failed == reference.direction_failed
     )
-    ideal = _ideal_reference(scenario, weights, decoded.threshold_norm)
+    ideal = _ideal_reference(scenario, weights, decoded.threshold_norm,
+                             reference.direction_failed or None)
     ideal_error = max(abs(a - b) for a, b in zip(decoded.delta.tolist(), ideal))
     expected_check = scenario.expect_output_check
+    expected_direction = scenario.expected_direction_failed
     return {
+        "direction_subset_size": len(direction["indices"]) if direction else 0,
+        "direction_min_agree": direction["min_agree"] if direction else None,
+        "direction_failed": mpc.direction_failed,
+        "reference_agreement": reference.agreement,
+        "direction_as_expected": (
+            None if expected_direction is None else mpc.direction_failed == expected_direction),
         "scenario": scenario.name,
         "description": scenario.description,
         "config": asdict(cfg),

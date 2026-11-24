@@ -1,0 +1,52 @@
+{
+  "run_id": "m1__reference_direction_secret_mtd__label_flip__s101",
+  "study": "m1",
+  "condition": "reference_direction_secret_mtd",
+  "attack": "label_flip",
+  "seed": 101,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "5f5be70d6210a807c92145ec731d678fa0199428977437893d4eb19a8e522a2d",
+  "config_sha256": "a3bb9cdeda16153410a7b9b825a7a5c432e6adbbe6da697f696d4764924eb076",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_direction_secret_mtd__label_flip__s101.yaml",
+  "started_utc": "2026-11-21T00:37:09Z",
+  "load_average_start": [
+    1.4619140625,
+    1.6220703125,
+    1.5888671875
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.652,
+  "finished_utc": "2026-11-21T00:39:00Z",
+  "load_average_end": [
+    1.26220703125,
+    1.54248046875,
+    1.56494140625
+  ],
+  "analysis": {
+    "final_accuracy": 0.817,
+    "final_loss": 0.49580500931739807,
+    "final_backdoor_asr": 0.017666666666666667,
+    "mean_deviation_from_honest_relative": 0.16424904616996772,
+    "mean_malicious_share_effective": 0.12923843561437412,
+    "mean_malicious_share_submitted": 0.3174575552589078,
+    "mean_reference_max_abs_error": 0.021642141789197926,
+    "max_reference_max_abs_error": 0.21642091870307922,
+    "mean_reference_relative_error": 0.05854281170010793,
+    "max_reference_relative_error": 0.5854272295872692,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.16424904616996772,
+    "mean_malicious_share_submitted": 0.3174575552589078,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

@@ -11,7 +11,12 @@ Attack types (``attacks.attack_type``):
   update multiplied by ``boost`` (``boost`` = 1 is a naive backdoor);
 * ``adaptive_backdoor`` – backdoor poisoning, then the update is rescaled to
   ``adaptive_norm_fraction`` times the defence threshold the attacker expects
-  (constrain-and-scale against norm bounds).
+  (constrain-and-scale against norm bounds);
+* ``evasive_backdoor`` – as ``adaptive_backdoor``, and in addition the attacker
+  also trains a clean update and copies it into the coordinates it believes the
+  direction screen checks, so that its signs look honest there. If the checked
+  subset is public it uses that subset; otherwise it guesses a random subset of
+  ``evasion_guess_fraction`` of the coordinates each round.
 
 Malicious-client placement (``attacks.placement``):
 
@@ -31,8 +36,9 @@ from fl_security.attacks.sign_flip import apply_sign_flip
 
 SUPPORTED_ATTACKS = {
     "sign_flip", "label_flip", "random_noise",
-    "scaled_replacement", "backdoor", "adaptive_backdoor",
+    "scaled_replacement", "backdoor", "adaptive_backdoor", "evasive_backdoor",
 }
+BACKDOOR_ATTACKS = {"backdoor", "adaptive_backdoor", "evasive_backdoor"}
 SUPPORTED_PLACEMENTS = {"random", "stratified", "predictive"}
 
 
@@ -49,6 +55,9 @@ class ByzantineAttacker:
         self.strength = float(attacks.get("strength", 1.0))
         self.boost = float(attacks.get("boost", 1.0))
         self.adaptive_norm_fraction = float(attacks.get("adaptive_norm_fraction", 0.95))
+        self.evasion_guess_fraction = float(attacks.get("evasion_guess_fraction", 0.25))
+        if not 0 < self.evasion_guess_fraction <= 1:
+            raise ValueError("attacks.evasion_guess_fraction must be in (0, 1]")
         self.seed = int(config.get("experiment", {}).get("seed", 42))
         if self.attack_type not in SUPPORTED_ATTACKS:
             raise ValueError(f"unsupported attack_type: {self.attack_type}")
@@ -61,7 +70,7 @@ class ByzantineAttacker:
         if not 0.0 <= self.poison_fraction <= 1.0:
             raise ValueError("attacks.backdoor.poison_fraction must be in [0, 1]")
         self.trigger = None
-        if self.attack_type in {"backdoor", "adaptive_backdoor"}:
+        if self.attack_type in BACKDOOR_ATTACKS:
             from fl_security.attacks.backdoor import BackdoorTrigger
 
             dataset = config.get("federated_learning", {}).get("dataset", "cifar10")
@@ -125,9 +134,12 @@ class ByzantineAttacker:
             return None
         if self.attack_type in {"label_flip", "scaled_replacement"}:
             return "label_flip"
-        if self.attack_type in {"backdoor", "adaptive_backdoor"}:
+        if self.attack_type in BACKDOOR_ATTACKS:
             return "backdoor"
         return None
+
+    def needs_clean_update(self, client_id: int, round_num: int) -> bool:
+        return self.attack_type == "evasive_backdoor" and self.is_malicious(client_id, round_num)
 
     def poison_batch(self, client_id: int, round_num: int, images, labels, generator=None):
         if self.data_poisoning(client_id, round_num) != "backdoor":
@@ -136,9 +148,26 @@ class ByzantineAttacker:
 
     # ---- update manipulation ------------------------------------------------------
     def perturb_update(self, client_id: int, round_num: int, global_state_dict: dict,
-                       local_state_dict: dict, threshold_estimate: float | None = None) -> dict:
+                       local_state_dict: dict, threshold_estimate: float | None = None,
+                       clean_state_dict: dict | None = None,
+                       known_indices: list[int] | None = None) -> dict:
         if not self.is_malicious(client_id, round_num):
             return local_state_dict
+        if self.attack_type == "evasive_backdoor":
+            if clean_state_dict is None:
+                raise ValueError("evasive_backdoor needs the attacker's clean update")
+            norm = _update_norm(global_state_dict, local_state_dict)
+            factor = (self.boost if threshold_estimate is None or norm <= 0
+                      else self.adaptive_norm_fraction * float(threshold_estimate) / norm)
+            scaled = _scale_update(global_state_dict, local_state_dict, factor)
+            clean = _scale_update(global_state_dict, clean_state_dict, factor)
+            if known_indices is None:
+                dimension = sum(v.numel() for v in global_state_dict.values()
+                                if torch.is_floating_point(v))
+                rng = np.random.default_rng(self.seed * 1_000_003 + round_num * 1_009 + client_id)
+                size = max(1, int(round(self.evasion_guess_fraction * dimension)))
+                known_indices = rng.choice(dimension, size, replace=False).tolist()
+            return _copy_coordinates(global_state_dict, scaled, clean, known_indices)
         if self.attack_type == "sign_flip":
             return apply_sign_flip(global_state_dict, local_state_dict, strength=self.strength)
         if self.attack_type == "random_noise":
@@ -177,6 +206,30 @@ def _update_norm(global_state: dict, local_state: dict) -> float:
             delta = local_state[key].detach().to(torch.float64) - base.detach().to(torch.float64)
             total += float((delta * delta).sum().item())
     return math.sqrt(total)
+
+
+def _copy_coordinates(global_state: dict, target: dict, source: dict, indices) -> dict:
+    """``target`` with the flat coordinates ``indices`` taken from ``source``.
+
+    Flat order is the order of the floating-point tensors in ``global_state``,
+    the same order the defence uses (smpc.robust.flatten_delta).
+    """
+    chosen = set(int(i) for i in indices)
+    result, offset = {}, 0
+    for key, base in global_state.items():
+        if not torch.is_floating_point(base):
+            result[key] = target[key]
+            continue
+        count = base.numel()
+        local = [i - offset for i in chosen if offset <= i < offset + count]
+        value = target[key].detach().clone()
+        if local:
+            flat = value.reshape(-1)
+            index = torch.tensor(local, dtype=torch.long)
+            flat[index] = source[key].detach().reshape(-1)[index].to(flat.dtype)
+        result[key] = value
+        offset += count
+    return result
 
 
 def _scale_update(global_state: dict, local_state: dict, factor: float) -> dict:

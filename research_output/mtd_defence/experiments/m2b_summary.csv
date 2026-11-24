@@ -1,0 +1,6 @@
+condition,attack,accuracy_mean,accuracy_min,accuracy_max,asr_mean,asr_min,asr_max,direction_tpr_mean,direction_tpr_min,direction_tpr_max,direction_fpr_mean,direction_fpr_min,direction_fpr_max,rejection_tpr_mean,rejection_tpr_min,rejection_tpr_max,rejection_fpr_mean,rejection_fpr_min,rejection_fpr_max,seeds
+reference_defence,none,0.8328666666666668,0.8328666666666668,0.8328666666666668,0.023555555555555555,0.023555555555555555,0.023555555555555555,,,,0.0,0.0,0.0,,,,0.0,0.0,0.0,1
+reference_defence,label_flip,0.8278,0.8278,0.8278,0.024555555555555556,0.024555555555555556,0.024555555555555556,0.0,0.0,0.0,0.0,0.0,0.0,0.8,0.8,0.8,0.0,0.0,0.0,1
+reference_defence,backdoor,0.8295333333333333,0.8295333333333333,0.8295333333333333,0.025222222222222222,0.025222222222222222,0.025222222222222222,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,1
+reference_defence,adaptive_backdoor,0.8251,0.8251,0.8251,0.4171111111111111,0.4171111111111111,0.4171111111111111,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1
+reference_defence,evasive_backdoor,0.8262999999999999,0.8262999999999999,0.8262999999999999,0.125,0.125,0.125,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1

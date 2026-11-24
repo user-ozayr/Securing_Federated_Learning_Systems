@@ -1,0 +1,52 @@
+{
+  "run_id": "m1__reference_direction_secret_mtd__evasive_backdoor__s101",
+  "study": "m1",
+  "condition": "reference_direction_secret_mtd",
+  "attack": "evasive_backdoor",
+  "seed": 101,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "d24164177e6098056b6bf3493237a37c47d34c230e08fd79c27e49b0ed42ae63",
+  "config_sha256": "934c127edef248c384a2ec728dd83b773b178562888a00620004e15469c2cea2",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_direction_secret_mtd__evasive_backdoor__s101.yaml",
+  "started_utc": "2026-11-21T00:42:42Z",
+  "load_average_start": [
+    1.4931640625,
+    1.53564453125,
+    1.54931640625
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.864,
+  "finished_utc": "2026-11-21T00:44:33Z",
+  "load_average_end": [
+    1.34033203125,
+    1.51171875,
+    1.537109375
+  ],
+  "analysis": {
+    "final_accuracy": 0.7998,
+    "final_loss": 0.6145285501480102,
+    "final_backdoor_asr": 0.020555555555555556,
+    "mean_deviation_from_honest_relative": 0.2891139131944573,
+    "mean_malicious_share_effective": 0.21263330133302483,
+    "mean_malicious_share_submitted": 0.2346950672883988,
+    "mean_reference_max_abs_error": 7.09202140569687e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 7.770840438009356e-08,
+    "max_reference_relative_error": 1.140200466535567e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.2891139131944573,
+    "mean_malicious_share_submitted": 0.2346950672883988,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

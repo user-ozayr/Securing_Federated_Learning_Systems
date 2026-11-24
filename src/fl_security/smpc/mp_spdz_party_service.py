@@ -217,7 +217,7 @@ class MPSpdzPartyService:
             "client_port_base", "program",
         }
         if kind == ROBUST_PROGRAM:
-            allowed |= {"weights", "robust_spec", "chunk_size"}
+            allowed |= {"weights", "robust_spec", "chunk_size", "direction"}
         unknown = set(payload) - allowed
         if unknown:
             raise ValueError(f"unexpected SPDZ2k round fields: {sorted(unknown)}")
@@ -279,9 +279,11 @@ class MPSpdzPartyService:
             if len(clients) < 2 or input_count < 2:
                 raise ValueError("robust aggregation requires two clients and one parameter")
             validate_spec(spec, weights)
+            # the optional direction screen is validated inside round_arguments
             args = round_arguments(
                 clients, expected_counts, weights, input_count,
                 output_client_id, port_base, chunk_size, spec,
+                direction=payload.get("direction"),
             )
             return ProgramIdentity(program_base, program_base, args, ROBUST_PROGRAM)
 

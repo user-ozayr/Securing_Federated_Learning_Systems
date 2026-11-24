@@ -1,0 +1,52 @@
+{
+  "run_id": "m1__reference_direction_secret_mtd__adaptive_backdoor__s102",
+  "study": "m1",
+  "condition": "reference_direction_secret_mtd",
+  "attack": "adaptive_backdoor",
+  "seed": 102,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "b963a56f173afc1d43498a02ed32543b5b91bdeaea3c5f0de8eba5df40d5cb7c",
+  "config_sha256": "0c298eb56401a4368503666f399c4a48b18701622324968b587376ea51382bfe",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_direction_secret_mtd__adaptive_backdoor__s102.yaml",
+  "started_utc": "2026-11-21T01:45:47Z",
+  "load_average_start": [
+    1.373046875,
+    1.53662109375,
+    1.53955078125
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.902,
+  "finished_utc": "2026-11-21T01:47:38Z",
+  "load_average_end": [
+    1.455078125,
+    1.5830078125,
+    1.55810546875
+  ],
+  "analysis": {
+    "final_accuracy": 0.8293,
+    "final_loss": 0.4639932616710663,
+    "final_backdoor_asr": 0.03777777777777778,
+    "mean_deviation_from_honest_relative": 0.2979383236871957,
+    "mean_malicious_share_effective": 0.24989351414444833,
+    "mean_malicious_share_submitted": 0.27561233605268354,
+    "mean_reference_max_abs_error": 0.015507829934358596,
+    "max_reference_max_abs_error": 0.15507745742797852,
+    "mean_reference_relative_error": 0.0565124585641099,
+    "max_reference_relative_error": 0.5651238000548606,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.2979383236871957,
+    "mean_malicious_share_submitted": 0.27561233605268354,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

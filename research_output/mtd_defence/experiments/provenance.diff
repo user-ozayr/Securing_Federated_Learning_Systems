@@ -1,0 +1,517 @@
+diff --git a/src/fl_security/attacks/byzantine.py b/src/fl_security/attacks/byzantine.py
+index 6ff3b87..c91ce60 100644
+--- a/src/fl_security/attacks/byzantine.py
++++ b/src/fl_security/attacks/byzantine.py
+@@ -11,7 +11,12 @@ Attack types (``attacks.attack_type``):
+   update multiplied by ``boost`` (``boost`` = 1 is a naive backdoor);
+ * ``adaptive_backdoor`` – backdoor poisoning, then the update is rescaled to
+   ``adaptive_norm_fraction`` times the defence threshold the attacker expects
+-  (constrain-and-scale against norm bounds).
++  (constrain-and-scale against norm bounds);
++* ``evasive_backdoor`` – as ``adaptive_backdoor``, and in addition the attacker
++  also trains a clean update and copies it into the coordinates it believes the
++  direction screen checks, so that its signs look honest there. If the checked
++  subset is public it uses that subset; otherwise it guesses a random subset of
++  ``evasion_guess_fraction`` of the coordinates each round.
+ 
+ Malicious-client placement (``attacks.placement``):
+ 
+@@ -31,8 +36,9 @@ from fl_security.attacks.sign_flip import apply_sign_flip
+ 
+ SUPPORTED_ATTACKS = {
+     "sign_flip", "label_flip", "random_noise",
+-    "scaled_replacement", "backdoor", "adaptive_backdoor",
++    "scaled_replacement", "backdoor", "adaptive_backdoor", "evasive_backdoor",
+ }
++BACKDOOR_ATTACKS = {"backdoor", "adaptive_backdoor", "evasive_backdoor"}
+ SUPPORTED_PLACEMENTS = {"random", "stratified", "predictive"}
+ 
+ 
+@@ -49,6 +55,9 @@ class ByzantineAttacker:
+         self.strength = float(attacks.get("strength", 1.0))
+         self.boost = float(attacks.get("boost", 1.0))
+         self.adaptive_norm_fraction = float(attacks.get("adaptive_norm_fraction", 0.95))
++        self.evasion_guess_fraction = float(attacks.get("evasion_guess_fraction", 0.25))
++        if not 0 < self.evasion_guess_fraction <= 1:
++            raise ValueError("attacks.evasion_guess_fraction must be in (0, 1]")
+         self.seed = int(config.get("experiment", {}).get("seed", 42))
+         if self.attack_type not in SUPPORTED_ATTACKS:
+             raise ValueError(f"unsupported attack_type: {self.attack_type}")
+@@ -61,7 +70,7 @@ class ByzantineAttacker:
+         if not 0.0 <= self.poison_fraction <= 1.0:
+             raise ValueError("attacks.backdoor.poison_fraction must be in [0, 1]")
+         self.trigger = None
+-        if self.attack_type in {"backdoor", "adaptive_backdoor"}:
++        if self.attack_type in BACKDOOR_ATTACKS:
+             from fl_security.attacks.backdoor import BackdoorTrigger
+ 
+             dataset = config.get("federated_learning", {}).get("dataset", "cifar10")
+@@ -125,10 +134,13 @@ class ByzantineAttacker:
+             return None
+         if self.attack_type in {"label_flip", "scaled_replacement"}:
+             return "label_flip"
+-        if self.attack_type in {"backdoor", "adaptive_backdoor"}:
++        if self.attack_type in BACKDOOR_ATTACKS:
+             return "backdoor"
+         return None
+ 
++    def needs_clean_update(self, client_id: int, round_num: int) -> bool:
++        return self.attack_type == "evasive_backdoor" and self.is_malicious(client_id, round_num)
++
+     def poison_batch(self, client_id: int, round_num: int, images, labels, generator=None):
+         if self.data_poisoning(client_id, round_num) != "backdoor":
+             return images, labels
+@@ -136,9 +148,26 @@ class ByzantineAttacker:
+ 
+     # ---- update manipulation ------------------------------------------------------
+     def perturb_update(self, client_id: int, round_num: int, global_state_dict: dict,
+-                       local_state_dict: dict, threshold_estimate: float | None = None) -> dict:
++                       local_state_dict: dict, threshold_estimate: float | None = None,
++                       clean_state_dict: dict | None = None,
++                       known_indices: list[int] | None = None) -> dict:
+         if not self.is_malicious(client_id, round_num):
+             return local_state_dict
++        if self.attack_type == "evasive_backdoor":
++            if clean_state_dict is None:
++                raise ValueError("evasive_backdoor needs the attacker's clean update")
++            norm = _update_norm(global_state_dict, local_state_dict)
++            factor = (self.boost if threshold_estimate is None or norm <= 0
++                      else self.adaptive_norm_fraction * float(threshold_estimate) / norm)
++            scaled = _scale_update(global_state_dict, local_state_dict, factor)
++            clean = _scale_update(global_state_dict, clean_state_dict, factor)
++            if known_indices is None:
++                dimension = sum(v.numel() for v in global_state_dict.values()
++                                if torch.is_floating_point(v))
++                rng = np.random.default_rng(self.seed * 1_000_003 + round_num * 1_009 + client_id)
++                size = max(1, int(round(self.evasion_guess_fraction * dimension)))
++                known_indices = rng.choice(dimension, size, replace=False).tolist()
++            return _copy_coordinates(global_state_dict, scaled, clean, known_indices)
+         if self.attack_type == "sign_flip":
+             return apply_sign_flip(global_state_dict, local_state_dict, strength=self.strength)
+         if self.attack_type == "random_noise":
+@@ -179,6 +208,30 @@ def _update_norm(global_state: dict, local_state: dict) -> float:
+     return math.sqrt(total)
+ 
+ 
++def _copy_coordinates(global_state: dict, target: dict, source: dict, indices) -> dict:
++    """``target`` with the flat coordinates ``indices`` taken from ``source``.
++
++    Flat order is the order of the floating-point tensors in ``global_state``,
++    the same order the defence uses (smpc.robust.flatten_delta).
++    """
++    chosen = set(int(i) for i in indices)
++    result, offset = {}, 0
++    for key, base in global_state.items():
++        if not torch.is_floating_point(base):
++            result[key] = target[key]
++            continue
++        count = base.numel()
++        local = [i - offset for i in chosen if offset <= i < offset + count]
++        value = target[key].detach().clone()
++        if local:
++            flat = value.reshape(-1)
++            index = torch.tensor(local, dtype=torch.long)
++            flat[index] = source[key].detach().reshape(-1)[index].to(flat.dtype)
++        result[key] = value
++        offset += count
++    return result
++
++
+ def _scale_update(global_state: dict, local_state: dict, factor: float) -> dict:
+     result = {}
+     for key, base in global_state.items():
+diff --git a/src/fl_security/experiments/grid.py b/src/fl_security/experiments/grid.py
+index be636fc..88a935d 100644
+--- a/src/fl_security/experiments/grid.py
++++ b/src/fl_security/experiments/grid.py
+@@ -90,6 +90,27 @@ CONFIGS = {
+                        {"defences": {"norm_defence_reference": CLIP_STATIC}}),
+ }
+ 
++# Moving-target direction screen (plaintext reference of the algorithm; M1 study).
++DIRECTION = {"direction_check": True, "direction_fraction": 0.25, "direction_min_agreement": 0.5}
++for _name, _subset, _extra in (
++    ("reference_direction_all", "all", {}),
++    ("reference_direction_public", "public", {}),
++    ("reference_direction_secret", "secret", {}),
++    ("reference_direction_secret_t52", "secret", {"direction_min_agreement": 0.52}),
++):
++    CONFIGS[_name] = (
++        f"Adaptive clip+screen plus sign-agreement direction screen ({_subset} subset)",
++        {"defences": {"norm_defence_reference": {
++            **DEFENCE_ADAPTIVE, **DIRECTION, "direction_subset": _subset, **_extra}}})
++CONFIGS["reference_direction_secret_mtd"] = (
++    "Direction screen on a secret subset plus secret MTD cohorts",
++    {"defences": {"norm_defence_reference": dict(DEFENCE_ADAPTIVE, **DIRECTION,
++                                                 direction_subset="secret")},
++     "mtd": {"schedule": "secret"}})
++CONFIGS["reference_defence_mtd"] = (
++    "Adaptive clip+screen (plaintext reference) plus secret MTD cohorts",
++    {"defences": {"norm_defence_reference": DEFENCE_ADAPTIVE}, "mtd": {"schedule": "secret"}})
++
+ BACKDOOR = {"target_label": 0, "trigger_size": 4, "poison_fraction": 0.5}
+ ATTACKS = {
+     "none": {"enabled": False},
+@@ -100,6 +121,9 @@ ATTACKS = {
+     "backdoor": {"enabled": True, "attack_type": "backdoor", "boost": 4.0, "backdoor": BACKDOOR},
+     "adaptive_backdoor": {"enabled": True, "attack_type": "adaptive_backdoor",
+                           "adaptive_norm_fraction": 0.95, "boost": 4.0, "backdoor": BACKDOOR},
++    "evasive_backdoor": {"enabled": True, "attack_type": "evasive_backdoor",
++                         "adaptive_norm_fraction": 0.95, "boost": 4.0, "backdoor": BACKDOOR,
++                         "evasion_guess_fraction": 0.25},
+ }
+ ATTACK_DEFAULTS = {"num_malicious": 3, "placement": "stratified"}
+ 
+@@ -247,6 +271,26 @@ def e5_noniid() -> list[RunSpec]:
+     return runs
+ 
+ 
++def m1_direction() -> list[RunSpec]:
++    """Moving-target direction screen (plaintext reference, 2 seeds).
++
++    Norm defence alone vs the direction screen on all coordinates, on a public
++    and on a secret 25 % subset, and with secret MTD cohorts; attackers include
++    an evasive backdoor that hides in the coordinates it believes are checked.
++    """
++    runs = []
++    conditions = ("reference_defence", "reference_direction_all", "reference_direction_public",
++                  "reference_direction_secret", "reference_direction_secret_t52",
++                  "reference_defence_mtd", "reference_direction_secret_mtd")
++    attacks = ("none", "label_flip", "backdoor", "adaptive_backdoor", "evasive_backdoor")
++    for seed_index, seed in enumerate(SEEDS[:2]):
++        for index, condition in enumerate(conditions):
++            for attack_index, attack in enumerate(attacks):
++                runs.append(make_run("m1", condition, attack, seed,
++                                     priority=(5, seed_index, 0, index, attack_index)))
++    return runs
++
++
+ STUDIES = {
+     "e1": e1_core,
+     "e1x": e1_extended,
+@@ -254,6 +298,7 @@ STUDIES = {
+     "e3": e3_mtd,
+     "e4": e4_sweeps,
+     "e5": e5_noniid,
++    "m1": m1_direction,
+ }
+ 
+ 
+diff --git a/src/fl_security/federated/flower_simulation.py b/src/fl_security/federated/flower_simulation.py
+index 8eef02e..3ccfa53 100644
+--- a/src/fl_security/federated/flower_simulation.py
++++ b/src/fl_security/federated/flower_simulation.py
+@@ -12,9 +12,11 @@ Aggregation paths (selected by configuration):
+ """
+ from __future__ import annotations
+ 
++import hashlib
+ import json
+ import os
+ import re
++import secrets
+ import time
+ import uuid
+ from collections.abc import Mapping
+@@ -54,6 +56,7 @@ from fl_security.smpc.robust import (
+     SecureDefenceConfig,
+     apply_delta,
+     decode_robust_output,
++    direction_key,
+     encode_delta,
+     flatten_delta,
+     robust_reference,
+@@ -241,6 +244,38 @@ def run_flower_simulation(config: dict) -> None:
+     global_model = make_model()
+     initial_state = global_model.state_dict()
+     parameter_count = count_parameters(global_model)
++
++    # Direction screen key material. "secret": FL_MTD_SECRET if provisioned,
++    # otherwise a fresh per-run key that is never stored, so clients cannot
++    # predict the checked coordinates. "public": derived from the experiment seed.
++    direction_enabled = norm_defence is not None and norm_defence.direction_check
++    direction_material, direction_key_source = None, None
++    if direction_enabled:
++        if secure_defence is not None:
++            raise NotImplementedError(
++                "the direction screen is implemented in the plaintext reference "
++                "(defences.norm_defence_reference) only")
++        if norm_defence.direction_subset == "secret":
++            env_secret = os.environ.get("FL_MTD_SECRET")
++            if env_secret:
++                direction_material = hashlib.sha256(
++                    b"direction-screen\x00" + env_secret.encode("utf-8")).digest()
++                direction_key_source = "FL_MTD_SECRET"
++            else:
++                direction_material = secrets.token_bytes(32)
++                direction_key_source = "per-run random key (not stored)"
++        elif norm_defence.direction_subset == "public":
++            direction_material = hashlib.sha256(f"public-direction-{seed}".encode()).digest()
++            direction_key_source = "public seed"
++        else:
++            direction_key_source = "all coordinates"
++
++    def direction_indices_for(round_num: int) -> list[int] | None:
++        if not direction_enabled:
++            return None
++        key = (None if direction_material is None
++               else direction_key(direction_material, round_num))
++        return norm_defence.direction_indices(parameter_count, key)
+     if use_smpc:
+         mpc_input_count = sum(
+             tensor.numel()
+@@ -346,10 +381,27 @@ def run_flower_simulation(config: dict) -> None:
+                 raise RuntimeError(
+                     f"Client {client_id}: non-finite values produced "
+                     f"during local training in tensors: {bad_training}")
++            clean_state = None
++            if attacker.needs_clean_update(client_id, round_num):
++                # the evasive attacker also trains honestly, from the same model
++                clean_model = make_model()
++                clean_model.load_state_dict(state)
++                torch.manual_seed(seed + round_num * 100_000 + client_id + 50_000)
++                clean_state = train_local(
++                    clean_model,
++                    DataLoader(dataset, batch_size=int(fl_config.get("batch_size", 32)),
++                               shuffle=True),
++                    epochs=int(fl_config.get("local_epochs", 1)),
++                    lr=float(fl_config.get("learning_rate", 0.01)),
++                    device=device,
++                )
++            known = fit_config.get("direction_indices_json")
+             estimate = fit_config.get("defence_threshold_estimate")
+             local_state = attacker.perturb_update(
+                 client_id, round_num, state, local_state,
+                 threshold_estimate=None if estimate is None else float(estimate),
++                clean_state_dict=clean_state,
++                known_indices=None if known is None else json.loads(known),
+             )
+ 
+             bad_attack = [
+@@ -533,10 +585,16 @@ def run_flower_simulation(config: dict) -> None:
+                     "client_id": int(cid),
+                     "smpc_enabled": bool(use_smpc),
+                 }
+-                if self.threshold_estimate is not None and attacker.attack_type == "adaptive_backdoor":
++                if self.threshold_estimate is not None and attacker.attack_type in (
++                        "adaptive_backdoor", "evasive_backdoor"):
+                     # Thresholds are public (static) or revealed every round
+                     # (adaptive); the adaptive attacker is assumed to know them.
+                     client_config["defence_threshold_estimate"] = float(self.threshold_estimate)
++                if (attacker.attack_type == "evasive_backdoor" and direction_enabled
++                        and norm_defence.direction_subset != "secret"):
++                    # a public (or full) subset is known to every client
++                    client_config["direction_indices_json"] = json.dumps(
++                        direction_indices_for(int(server_round)))
+ 
+                 if use_smpc:
+                     client_config.update({
+@@ -593,7 +651,8 @@ def run_flower_simulation(config: dict) -> None:
+ 
+             return instructions
+ 
+-        def _apply_norm_defence(self, config_obj, client_ids, client_states, counts):
++        def _apply_norm_defence(self, config_obj, client_ids, client_states, counts,
++                                server_round=0):
+             """Plaintext execution of the norm-defence algorithm (reference only)."""
+             order = sorted(range(len(client_ids)), key=lambda i: client_ids[i])
+             sorted_ids = [client_ids[i] for i in order]
+@@ -603,7 +662,10 @@ def run_flower_simulation(config: dict) -> None:
+             inputs = [
+                 encode_delta(client_states[i], base, config_obj.fractional_bits) for i in order
+             ]
+-            result = robust_reference(inputs, weights, spec)
++            indices = direction_indices_for(int(server_round))
++            result = robust_reference(
++                inputs, weights, spec, direction_indices=indices,
++                min_agree=config_obj.min_agreement_count(len(indices)) if indices else 0)
+             return sorted_ids, weights, decode_robust_output(result, weights, config_obj)
+ 
+         def _record_norm_defence(self, sorted_ids, weights, decoded, config_obj):
+@@ -640,6 +702,18 @@ def run_flower_simulation(config: dict) -> None:
+                 "rejected_false_positives": rejection["fp"],
+                 "weights_json": json.dumps(dict(zip(sorted_ids, weights))),
+             }
++            if result.direction_failed:
++                direction = {cid: int(f) for cid, f in zip(sorted_ids, result.direction_failed)}
++                counts_dir = _detection_counts(direction, malicious)
++                self.last_defence.update({
++                    "direction_rejected_client_ids": json.dumps(
++                        [cid for cid in sorted_ids if direction[cid]]),
++                    "direction_true_positives": counts_dir["tp"],
++                    "direction_false_positives": counts_dir["fp"],
++                    "direction_agreement_json": json.dumps(
++                        dict(zip(sorted_ids, result.agreement))),
++                    "direction_key_source": direction_key_source,
++                })
+ 
+         def aggregate_fit(self, server_round, results, failures):
+             started = time.perf_counter()
+@@ -784,7 +858,8 @@ def run_flower_simulation(config: dict) -> None:
+                     elif reference_defence is not None:
+                         self.last_robust_report = {}
+                         sorted_ids, weights, decoded = self._apply_norm_defence(
+-                            reference_defence, client_ids, client_states, counts
++                            reference_defence, client_ids, client_states, counts,
++                            server_round=server_round,
+                         )
+                         self._record_norm_defence(sorted_ids, weights, decoded, reference_defence)
+                         if decoded.output_check_passed and decoded.accepted_weight > 0:
+diff --git a/src/fl_security/smpc/robust.py b/src/fl_security/smpc/robust.py
+index 7e8f754..fd8bf70 100644
+--- a/src/fl_security/smpc/robust.py
++++ b/src/fl_security/smpc/robust.py
+@@ -30,6 +30,18 @@ SPEC_LENGTH = 13
+ VALID_MODES = ("clip", "screen", "clip_screen")
+ VALID_THRESHOLDS = ("static", "adaptive")
+ VALID_WEIGHTING = ("uniform", "sample")
++VALID_DIRECTION_SUBSETS = ("secret", "public", "all")
++
++
++def direction_key(secret: bytes, round_num: int, label: bytes = b"direction-subset") -> bytes:
++    """Round-scoped key for the direction subset, derived like the MTD cohorts."""
++    import hashlib
++    import hmac
++
++    if not isinstance(secret, bytes) or len(secret) < 16:
++        raise ValueError("direction key material must contain at least 16 bytes")
++    return hmac.new(secret, label + b"\x00" + int(round_num).to_bytes(8, "big"),
++                    hashlib.sha256).digest()
+ 
+ 
+ def _is_int(value) -> bool:
+@@ -79,6 +91,14 @@ class SecureDefenceConfig:
+     chunk_size: int = 256
+     output_margin: float = 4.0
+     use_edabits: bool = False
++    # Direction screen (moving target): per round, a subset of coordinates is
++    # drawn from a key the clients do not know; a client is rejected when its
++    # update's signs agree with the other clients' majority sign on fewer than
++    # direction_min_agreement of those coordinates.
++    direction_check: bool = False
++    direction_subset: str = "secret"
++    direction_fraction: float = 0.25
++    direction_min_agreement: float = 0.5
+ 
+     def __post_init__(self) -> None:
+         if self.mode not in VALID_MODES:
+@@ -114,6 +134,38 @@ class SecureDefenceConfig:
+             raise ValueError("use_edabits must be a boolean")
+         if self.output_margin < 2:
+             raise ValueError("output_margin must be at least 2")
++        if not isinstance(self.direction_check, bool):
++            raise ValueError("direction_check must be a boolean")
++        if self.direction_subset not in VALID_DIRECTION_SUBSETS:
++            raise ValueError(f"direction_subset must be one of {VALID_DIRECTION_SUBSETS}")
++        for name in ("direction_fraction", "direction_min_agreement"):
++            value = getattr(self, name)
++            if isinstance(value, bool) or not isinstance(value, (int, float)) \
++                    or not 0 < float(value) <= 1:
++                raise ValueError(f"{name} must be a number in (0, 1]")
++
++    # ---- direction screen -----------------------------------------------------
++    def direction_indices(self, dimension: int, key: bytes | None) -> list[int]:
++        """Coordinates checked in one round (sorted).
++
++        ``all``: every coordinate. ``public`` and ``secret``: a uniformly random
++        subset of ``direction_fraction * dimension`` coordinates drawn with an
++        HMAC stream; the key decides who can predict it (a public seed, or a
++        secret the clients do not hold).
++        """
++        if not _is_int(dimension) or dimension <= 0:
++            raise ValueError("dimension must be a positive integer")
++        if self.direction_subset == "all":
++            return list(range(dimension))
++        if key is None:
++            raise ValueError("a subset key is required for public or secret subsets")
++        from fl_security.mtd.randomness import HMACCounterRNG
++
++        size = max(1, min(dimension, int(round(self.direction_fraction * dimension))))
++        return sorted(HMACCounterRNG(key).sample(range(dimension), size))
++
++    def min_agreement_count(self, subset_size: int) -> int:
++        return max(1, math.ceil(self.direction_min_agreement * subset_size - 1e-9))
+ 
+     @classmethod
+     def from_mapping(cls, raw: Mapping[str, object] | None) -> "SecureDefenceConfig":
+@@ -308,17 +360,49 @@ class RobustResult:
+     totals: list[int]
+     coefficients: list[int] = field(default_factory=list)
+     squared_norms: list[int] = field(default_factory=list)
++    # direction screen: 1 = rejected for disagreeing with the majority sign;
++    # agreement counts are kept for evaluation only (not revealed by MPC)
++    direction_failed: list[int] = field(default_factory=list)
++    agreement: list[int] = field(default_factory=list)
++
++
++def direction_screen(inputs: Sequence[Sequence[int]], indices: Sequence[int],
++                     min_agree: int) -> tuple[list[int], list[int]]:
++    """Sign agreement of every client with the majority sign of the others.
++
++    On each checked coordinate j, ``b_kj = [x_kj >= 0]`` (sign bit of the 64-bit
++    ring value) and the others' majority is ``[2 * (sum_i b_ij - b_kj) >= K - 1]``
++    (ties count as non-negative). Returns ``(passed, agreement_counts)``.
++    """
++    count = len(inputs)
++    if count < 2 or not indices:
++        raise ValueError("the direction screen needs two clients and a non-empty subset")
++    if not 1 <= min_agree <= len(indices):
++        raise ValueError("min_agree must lie in [1, subset size]")
++    agreement = [0] * count
++    for j in indices:
++        bits = [1 - _lt(int(row[j]) % RING_MODULUS, 0) for row in inputs]
++        positives = sum(bits)
++        for k in range(count):
++            majority = 1 - _lt(2 * (positives - bits[k]), count - 1)
++            agreement[k] += 1 if bits[k] == majority else 0
++    passed = [1 if a >= min_agree else 0 for a in agreement]
++    return passed, agreement
+ 
+ 
+ def robust_reference(
+     inputs: Sequence[Sequence[int]],
+     weights: Sequence[int],
+     spec: Sequence[int],
++    direction_indices: Sequence[int] | None = None,
++    min_agree: int = 0,
+ ) -> RobustResult:
+     """Exact integer emulation of spdz2k_robust_aggregate.mpc.
+ 
+     ``inputs`` holds each client's encoded delta (without the sample count), in
+     the order of the sorted selected client IDs; values are reduced mod 2^64.
++    With ``direction_indices`` the direction screen is applied on top of the
++    norm defence: a client must pass both to be accepted.
+     """
+     validate_spec(spec, weights)
+     (
+@@ -361,6 +445,13 @@ def robust_reference(
+     else:
+         threshold = static_t % mod
+ 
++    if direction_indices is not None:
++        if any(not _is_int(j) or not 0 <= j < dimension for j in direction_indices):
++            raise ValueError("direction indices must lie in [0, dimension)")
++        direction_passed, agreement = direction_screen(inputs, direction_indices, min_agree)
++    else:
++        direction_passed, agreement = [1] * len(weights), []
++
+     accepted, coefficients, clipped = [], [], []
+     for k, weight in enumerate(weights):
+         w2 = weight * weight
+@@ -382,6 +473,7 @@ def robust_reference(
+         else:
+             c_k = one_g
+             clipped.append(0)
++        a_k *= direction_passed[k]
+         accepted.append(a_k)
+         coefficients.append(c_k)
+ 
+@@ -403,6 +495,8 @@ def robust_reference(
+         totals=[to_signed(value) for value in totals],
+         coefficients=coefficients,
+         squared_norms=[to_signed(value) for value in squared],
++        direction_failed=[1 - p for p in direction_passed] if direction_indices is not None else [],
++        agreement=agreement,
+     )
+ 
+ 

@@ -1,0 +1,57 @@
+attacks:
+  adaptive_norm_fraction: 0.95
+  adversary_model: just_in_time
+  attack_type: adaptive_backdoor
+  backdoor:
+    poison_fraction: 0.5
+    target_label: 0
+    trigger_size: 4
+  boost: 4.0
+  enabled: true
+  num_malicious: 4
+  placement: random
+evaluation:
+  instrumentation: true
+  measure_backdoor_asr: true
+  output_dir: /home/ubuntu/gemini/fl-security-research-mtd-defence/research_output/mtd_defence/experiments/runs/f1/f1__smpc_direction_mtd__adaptive_backdoor__jit4__s101
+  save_csv: true
+  save_plots: false
+experiment:
+  name: f1__smpc_direction_mtd__adaptive_backdoor__jit4__s101
+  rounds: 10
+  seed: 101
+federated_learning:
+  batch_size: 32
+  dataset: fashion_mnist
+  fraction_train: 0.59
+  framework: flower
+  learning_rate: 0.05
+  local_epochs: 1
+  model: compact_cnn
+  num_clients: 12
+  partitioning: iid
+mtd:
+  schedule: secret
+smpc:
+  backend: mp_spdz_spdz2k
+  defence:
+    clip_bits: 7
+    direction_check: true
+    direction_fraction: 0.25
+    direction_min_agreement: 0.52
+    direction_subset: secret
+    enabled: true
+    fractional_bits: 14
+    max_norm: 16.0
+    max_valid_norm: 64.0
+    median_multiplier_squared: 1
+    min_norm: 0.25
+    mode: clip_screen
+    reveal_client_flags: true
+    screen_multiplier_squared: 4
+    static_norm: 4.0
+    threshold: adaptive
+  enabled: true
+  fixed_point_scale: 1000000
+  min_clients_per_round: 2
+  num_aggregation_parties: 3

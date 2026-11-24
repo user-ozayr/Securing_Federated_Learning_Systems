@@ -1,0 +1,57 @@
+{
+  "run_id": "m1__reference_defence__none__s101",
+  "study": "m1",
+  "condition": "reference_defence",
+  "attack": "none",
+  "seed": 101,
+  "uses_mpc": false,
+  "mtd_schedule": "static",
+  "mtd_secret_sha256_commitment": null,
+  "config_sha256": "757abadd8546a85b7917447d72b637958fe5726488fb236fe18362c3a4df6613",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_defence__none__s101.yaml",
+  "started_utc": "2026-11-20T23:39:35Z",
+  "load_average_start": [
+    0.2626953125,
+    0.24658203125,
+    0.57373046875
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.76,
+  "finished_utc": "2026-11-20T23:41:26Z",
+  "load_average_end": [
+    1.56103515625,
+    0.74365234375,
+    0.720703125
+  ],
+  "analysis": {
+    "final_accuracy": 0.8112,
+    "final_loss": 0.521293341255188,
+    "final_backdoor_asr": 0.02388888888888889,
+    "mean_deviation_from_honest_relative": 0.06029329841512675,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 7.972121238708496e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 9.0627901597474e-08,
+    "max_reference_relative_error": 1.4755712345236827e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.06029329841512675,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 7.972121238708496e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 9.0627901597474e-08,
+    "max_reference_relative_error": 1.4755712345236827e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

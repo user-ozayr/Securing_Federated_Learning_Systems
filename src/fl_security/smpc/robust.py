@@ -30,6 +30,18 @@ SPEC_LENGTH = 13
 VALID_MODES = ("clip", "screen", "clip_screen")
 VALID_THRESHOLDS = ("static", "adaptive")
 VALID_WEIGHTING = ("uniform", "sample")
+VALID_DIRECTION_SUBSETS = ("secret", "public", "all")
+
+
+def direction_key(secret: bytes, round_num: int, label: bytes = b"direction-subset") -> bytes:
+    """Round-scoped key for the direction subset, derived like the MTD cohorts."""
+    import hashlib
+    import hmac
+
+    if not isinstance(secret, bytes) or len(secret) < 16:
+        raise ValueError("direction key material must contain at least 16 bytes")
+    return hmac.new(secret, label + b"\x00" + int(round_num).to_bytes(8, "big"),
+                    hashlib.sha256).digest()
 
 
 def _is_int(value) -> bool:
@@ -79,6 +91,14 @@ class SecureDefenceConfig:
     chunk_size: int = 256
     output_margin: float = 4.0
     use_edabits: bool = False
+    # Direction screen (moving target): per round, a subset of coordinates is
+    # drawn from a key the clients do not know; a client is rejected when its
+    # update's signs agree with the other clients' majority sign on fewer than
+    # direction_min_agreement of those coordinates.
+    direction_check: bool = False
+    direction_subset: str = "secret"
+    direction_fraction: float = 0.25
+    direction_min_agreement: float = 0.5
 
     def __post_init__(self) -> None:
         if self.mode not in VALID_MODES:
@@ -114,6 +134,40 @@ class SecureDefenceConfig:
             raise ValueError("use_edabits must be a boolean")
         if self.output_margin < 2:
             raise ValueError("output_margin must be at least 2")
+        if not isinstance(self.direction_check, bool):
+            raise ValueError("direction_check must be a boolean")
+        if self.direction_subset not in VALID_DIRECTION_SUBSETS:
+            raise ValueError(f"direction_subset must be one of {VALID_DIRECTION_SUBSETS}")
+        for name in ("direction_fraction", "direction_min_agreement"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                    or not 0 < float(value) <= 1:
+                raise ValueError(f"{name} must be a number in (0, 1]")
+        if self.direction_check and self.squared(self.max_valid_norm) >= 1 << (2 * (SIGN_TEST_BITS - 1)):
+            raise ValueError("max_valid_norm too large for the 32-bit sign test of the direction screen")
+
+    # ---- direction screen -----------------------------------------------------
+    def direction_indices(self, dimension: int, key: bytes | None) -> list[int]:
+        """Coordinates checked in one round (sorted).
+
+        ``all``: every coordinate. ``public`` and ``secret``: a uniformly random
+        subset of ``direction_fraction * dimension`` coordinates drawn with an
+        HMAC stream; the key decides who can predict it (a public seed, or a
+        secret the clients do not hold).
+        """
+        if not _is_int(dimension) or dimension <= 0:
+            raise ValueError("dimension must be a positive integer")
+        if self.direction_subset == "all":
+            return list(range(dimension))
+        if key is None:
+            raise ValueError("a subset key is required for public or secret subsets")
+        from fl_security.mtd.randomness import HMACCounterRNG
+
+        size = max(1, min(dimension, int(round(self.direction_fraction * dimension))))
+        return sorted(HMACCounterRNG(key).sample(range(dimension), size))
+
+    def min_agreement_count(self, subset_size: int) -> int:
+        return max(1, math.ceil(self.direction_min_agreement * subset_size - 1e-9))
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, object] | None) -> "SecureDefenceConfig":
@@ -242,9 +296,21 @@ def round_arguments(
     port_base: int,
     chunk_size: int,
     spec: Sequence[int],
+    direction: Mapping[str, object] | None = None,
 ) -> list[str]:
-    """The eight string arguments of the robust MPC program (sorted by client ID)."""
+    """String arguments of the robust MPC program (sorted by client ID).
+
+    Eight arguments without the direction screen; with ``direction``
+    (``{"min_agree": int, "indices": [...]}``) two more: the minimum agreement
+    count and the checked coordinate indices. The indices go to the parties
+    only; clients never see them.
+    """
     order = sorted(range(len(client_ids)), key=lambda index: client_ids[index])
+    extra = []
+    if direction is not None:
+        dimension = int(input_count) - 1
+        min_agree, indices = validate_direction(direction, dimension)
+        extra = [str(min_agree), ",".join(str(j) for j in indices)]
     return [
         ",".join(str(int(client_ids[i])) for i in order),
         ",".join(str(int(expected_counts[i])) for i in order),
@@ -254,7 +320,24 @@ def round_arguments(
         str(int(port_base)),
         str(int(chunk_size)),
         ",".join(str(int(value)) for value in spec),
+        *extra,
     ]
+
+
+def validate_direction(direction: Mapping[str, object], dimension: int) -> tuple[int, list[int]]:
+    """Check a direction-screen specification; returns ``(min_agree, indices)``."""
+    if not isinstance(direction, Mapping) or set(direction) != {"min_agree", "indices"}:
+        raise ValueError("direction must contain exactly min_agree and indices")
+    min_agree, indices = direction["min_agree"], direction["indices"]
+    if not isinstance(indices, (list, tuple)) or not indices \
+            or any(not _is_int(j) for j in indices):
+        raise ValueError("direction indices must be a non-empty list of integers")
+    indices = [int(j) for j in indices]
+    if indices != sorted(set(indices)) or indices[0] < 0 or indices[-1] >= dimension:
+        raise ValueError("direction indices must be sorted, unique and inside the model")
+    if not _is_int(min_agree) or not 1 <= min_agree <= len(indices):
+        raise ValueError("min_agree must lie in [1, number of indices]")
+    return int(min_agree), indices
 
 
 # ---- client encoding ------------------------------------------------------------
@@ -308,17 +391,60 @@ class RobustResult:
     totals: list[int]
     coefficients: list[int] = field(default_factory=list)
     squared_norms: list[int] = field(default_factory=list)
+    # direction screen: 1 = rejected for disagreeing with the majority sign;
+    # agreement counts are kept for evaluation only (not revealed by MPC)
+    direction_failed: list[int] = field(default_factory=list)
+    agreement: list[int] = field(default_factory=list)
+
+
+SIGN_TEST_BITS = 32
+
+
+def _sign_bit(value: int) -> int:
+    """MP-SPDZ ``less_than(0, bit_length=32)`` on SPDZ2k: the MSB of x mod 2^32.
+
+    Exact for |x| < 2^31, which every valid update coordinate satisfies.
+    """
+    return ((value % (1 << SIGN_TEST_BITS)) >> (SIGN_TEST_BITS - 1)) & 1
+
+
+def direction_screen(inputs: Sequence[Sequence[int]], indices: Sequence[int],
+                     min_agree: int) -> tuple[list[int], list[int]]:
+    """Sign agreement of every client with the majority sign of the others.
+
+    On each checked coordinate j, ``b_kj = [x_kj >= 0]`` (32-bit sign test, see
+    :func:`_sign_bit`) and the others' majority is ``[2 * (sum_i b_ij - b_kj) >= K - 1]``
+    (ties count as non-negative). Returns ``(passed, agreement_counts)``.
+    """
+    count = len(inputs)
+    if count < 2 or not indices:
+        raise ValueError("the direction screen needs two clients and a non-empty subset")
+    if not 1 <= min_agree <= len(indices):
+        raise ValueError("min_agree must lie in [1, subset size]")
+    agreement = [0] * count
+    for j in indices:
+        bits = [1 - _sign_bit(int(row[j])) for row in inputs]
+        positives = sum(bits)
+        for k in range(count):
+            majority = 1 - _lt(2 * (positives - bits[k]), count - 1)
+            agreement[k] += 1 if bits[k] == majority else 0
+    passed = [1 if a >= min_agree else 0 for a in agreement]
+    return passed, agreement
 
 
 def robust_reference(
     inputs: Sequence[Sequence[int]],
     weights: Sequence[int],
     spec: Sequence[int],
+    direction_indices: Sequence[int] | None = None,
+    min_agree: int = 0,
 ) -> RobustResult:
     """Exact integer emulation of spdz2k_robust_aggregate.mpc.
 
     ``inputs`` holds each client's encoded delta (without the sample count), in
     the order of the sorted selected client IDs; values are reduced mod 2^64.
+    With ``direction_indices`` the direction screen is applied on top of the
+    norm defence: a client must pass both to be accepted.
     """
     validate_spec(spec, weights)
     (
@@ -361,6 +487,13 @@ def robust_reference(
     else:
         threshold = static_t % mod
 
+    if direction_indices is not None:
+        if any(not _is_int(j) or not 0 <= j < dimension for j in direction_indices):
+            raise ValueError("direction indices must lie in [0, dimension)")
+        direction_passed, agreement = direction_screen(inputs, direction_indices, min_agree)
+    else:
+        direction_passed, agreement = [1] * len(weights), []
+
     accepted, coefficients, clipped = [], [], []
     for k, weight in enumerate(weights):
         w2 = weight * weight
@@ -382,6 +515,7 @@ def robust_reference(
         else:
             c_k = one_g
             clipped.append(0)
+        a_k *= direction_passed[k]
         accepted.append(a_k)
         coefficients.append(c_k)
 
@@ -403,16 +537,23 @@ def robust_reference(
         totals=[to_signed(value) for value in totals],
         coefficients=coefficients,
         squared_norms=[to_signed(value) for value in squared],
+        direction_failed=(
+            ([1 - p for p in direction_passed] if reveal else [0] * len(weights))
+            if direction_indices is not None else []),
+        agreement=agreement,
     )
 
 
-def result_from_outputs(outputs: Sequence[int], client_count: int, dimension: int) -> RobustResult:
-    header = 2 + 2 * client_count
+def result_from_outputs(outputs: Sequence[int], client_count: int, dimension: int,
+                        direction: bool = False) -> RobustResult:
+    """Parse ``[T, clipped, a_1..a_K, clip_1..clip_K, (dir_1..dir_K), A_1..A_d]``."""
+    header = 2 + (3 if direction else 2) * client_count
     if len(outputs) != header + dimension:
         raise RuntimeError("robust SPDZ2k output length did not match the round schema")
     accepted = [int(v) for v in outputs[2 : 2 + client_count]]
-    flags = [int(v) for v in outputs[2 + client_count : header]]
-    if any(v not in (0, 1) for v in accepted + flags):
+    flags = [int(v) for v in outputs[2 + client_count : 2 + 2 * client_count]]
+    direction_failed = [int(v) for v in outputs[2 + 2 * client_count : header]]
+    if any(v not in (0, 1) for v in accepted + flags + direction_failed):
         raise RuntimeError("robust SPDZ2k output contained non-binary decision values")
     return RobustResult(
         threshold_squared=int(outputs[0]),
@@ -420,6 +561,7 @@ def result_from_outputs(outputs: Sequence[int], client_count: int, dimension: in
         accepted=accepted,
         clip_flags=flags,
         totals=[int(v) for v in outputs[header:]],
+        direction_failed=direction_failed,
     )
 
 

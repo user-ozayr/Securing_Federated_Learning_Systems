@@ -1,0 +1,24 @@
+base commit: 14b7bb541445a39cd9995ecec9cf4c085daabb8a
+ M src/fl_security/attacks/byzantine.py
+ M src/fl_security/experiments/analysis.py
+ M src/fl_security/experiments/grid.py
+ M src/fl_security/federated/flower_simulation.py
+ M src/fl_security/smpc/mp_spdz.py
+ M src/fl_security/smpc/mp_spdz_party_service.py
+ M src/fl_security/smpc/programs/spdz2k_robust_aggregate.mpc
+ M src/fl_security/smpc/robust.py
+ M src/fl_security/smpc/validation.py
+?? research_output/mtd_defence/
+?? tests/test_direction_screen.py
+
+SHA-256 of modified and new source files:
+9a7a2dcaebf0e8e4da60651c1860297a97476e0f4d2fcb951c2ed75b4d8b736f  src/fl_security/attacks/byzantine.py
+ab4b6c370d3250fb13abe76090f164f326865a9bc005029f3eac68f5b97482ce  src/fl_security/experiments/analysis.py
+4ec01aeb50727e130de039beb7fb2fb8c5645be993536b101e8d0e741210a352  src/fl_security/experiments/grid.py
+35517b2b14a9c345d20ed49fff021338374f5d44d6c7013d4c3bda43ed39660e  src/fl_security/federated/flower_simulation.py
+8c559a7e0129c631bcef1767c5ed9974ff6b18da2f9e3177c425bc72c6954ec0  src/fl_security/smpc/mp_spdz.py
+88d3dbdc76bc5ffa3d8d48813e6b94bd34077dbf47eb9a6b44538138239135a3  src/fl_security/smpc/mp_spdz_party_service.py
+e6b12c9402cf226ce33f710901c5de7d2e7135212d4105093e855b6833c4cdb3  src/fl_security/smpc/programs/spdz2k_robust_aggregate.mpc
+e368261af26172eb939513fbb599cb9469c4dabf86add23e5e29854c9ed446e6  src/fl_security/smpc/robust.py
+9f2c5d6736726c2e306d29acda0d18bc6aadeac3817310e6de38bf2f369584b0  src/fl_security/smpc/validation.py
+0e3afc6a71244cec118188129de95a74f94073fddd2a6e3fcfa6e3d1d42a2165  tests/test_direction_screen.py

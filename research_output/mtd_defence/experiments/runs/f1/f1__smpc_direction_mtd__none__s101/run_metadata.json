@@ -1,0 +1,57 @@
+{
+  "run_id": "f1__smpc_direction_mtd__none__s101",
+  "study": "f1",
+  "condition": "smpc_direction_mtd",
+  "attack": "none",
+  "seed": 101,
+  "uses_mpc": true,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "691fd33e7064f74e5b78cc7ae53955dbc11a28bab3f26726bbb853e0e3e7bea7",
+  "config_sha256": "67f61926848daadd3b0ad44318e523defca707fcdc267596c39174cea09886b2",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/f1/f1__smpc_direction_mtd__none__s101.yaml --local-mp-spdz",
+  "started_utc": "2026-11-21T09:10:37Z",
+  "load_average_start": [
+    5.30078125,
+    6.29736328125,
+    6.42724609375
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 2779.557,
+  "finished_utc": "2026-11-21T09:56:57Z",
+  "load_average_end": [
+    5.6474609375,
+    6.1044921875,
+    6.259765625
+  ],
+  "analysis": {
+    "final_accuracy": 0.826,
+    "final_loss": 0.4754362617015839,
+    "final_backdoor_asr": 0.014888888888888889,
+    "mean_deviation_from_honest_relative": 0.03814860418774642,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 6.495974957596018e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.5839318753012624e-07,
+    "max_reference_relative_error": 2.498947263487786e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.03814860418774642,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 6.495974957596018e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.5839318753012624e-07,
+    "max_reference_relative_error": 2.498947263487786e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

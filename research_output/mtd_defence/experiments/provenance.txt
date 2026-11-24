@@ -1,0 +1,14 @@
+base commit: 14b7bb541445a39cd9995ecec9cf4c085daabb8a
+ M src/fl_security/attacks/byzantine.py
+ M src/fl_security/experiments/grid.py
+ M src/fl_security/federated/flower_simulation.py
+ M src/fl_security/smpc/robust.py
+?? research_output/mtd_defence/
+?? tests/test_direction_screen.py
+
+SHA-256 of modified and new source files:
+9a7a2dcaebf0e8e4da60651c1860297a97476e0f4d2fcb951c2ed75b4d8b736f  src/fl_security/attacks/byzantine.py
+f2bcfefc5bb0f7d4e77456425b209e9b344f0214b3a7a48d5ee2eac6c65015d2  src/fl_security/experiments/grid.py
+27fff672504f5d412d2c9866cfdbe332e91347fbb93757e6c2d1c6aea95d54ea  src/fl_security/federated/flower_simulation.py
+ca123ff5705439f87074da87eb995d7a383c35038d0fbaa2a78818db421d15fe  src/fl_security/smpc/robust.py
+fed3aceb025068faf78117adab8973763837afffaa16b68b712679ae4ce7c7d4  tests/test_direction_screen.py

@@ -1,0 +1,59 @@
+{
+  "run_id": "p3__reference_direction_secret_mtd_t52__adaptive_backdoor__jit4__s105",
+  "study": "p3",
+  "condition": "reference_direction_secret_mtd_t52",
+  "attack": "adaptive_backdoor__jit4",
+  "seed": 105,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "887b66cc887af18c4c711450e8aeb217055b3ebd591bc0e230b88a452d58d92f",
+  "paired_secret": true,
+  "pairing_key_sha256": "e66a8c1d2c9460edb870aef75439f8ab2392b91fda5d7cef0dce15a1224cefe4",
+  "config_sha256": "730d400cb70ea48b9189f9af1ae330baa7f614d2619e7f8204836077cc93d07a",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/p3/p3__reference_direction_secret_mtd_t52__adaptive_backdoor__jit4__s105.yaml",
+  "started_utc": "2026-11-21T22:47:21Z",
+  "load_average_start": [
+    3.0185546875,
+    2.3359375,
+    2.09814453125
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 131.056,
+  "finished_utc": "2026-11-21T22:49:32Z",
+  "load_average_end": [
+    1.91845703125,
+    2.15869140625,
+    2.06689453125
+  ],
+  "analysis": {
+    "final_accuracy": 0.8304,
+    "final_loss": 0.46438437814712524,
+    "final_backdoor_asr": 0.8578888888888889,
+    "mean_deviation_from_honest_relative": 0.5153002409320855,
+    "mean_malicious_share_effective": 0.38721193832640277,
+    "mean_malicious_share_submitted": 0.4640593263195741,
+    "mean_reference_max_abs_error": 9.48813699441775e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.5782011580227982e-07,
+    "max_reference_relative_error": 2.414165871431322e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.5153002409320855,
+    "mean_malicious_share_effective": 0.38721193832640277,
+    "mean_malicious_share_submitted": 0.4640593263195741,
+    "mean_reference_max_abs_error": 9.48813699441775e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 1.5782011580227982e-07,
+    "max_reference_relative_error": 2.414165871431322e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

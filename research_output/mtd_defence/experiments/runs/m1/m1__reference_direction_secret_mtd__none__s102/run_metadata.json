@@ -1,0 +1,52 @@
+{
+  "run_id": "m1__reference_direction_secret_mtd__none__s102",
+  "study": "m1",
+  "condition": "reference_direction_secret_mtd",
+  "attack": "none",
+  "seed": 102,
+  "uses_mpc": false,
+  "mtd_schedule": "secret",
+  "mtd_secret_sha256_commitment": "e7a717758f6854e572ff716af4da12def28bfabfc25eed9cf1c05d6a8b9cb9c1",
+  "config_sha256": "06a71396632cf39eb1a385fa7db4872eebc7753331d6a5b3ac73c3d6b798f62a",
+  "git_commit": "14b7bb541445a39cd9995ecec9cf4c085daabb8a",
+  "git_dirty": true,
+  "host": "oracle-vnic-3",
+  "python": "3.11.18",
+  "command": "/home/ubuntu/gemini/fl-security-research-mtd-defence/run_experiment.py --config research_output/mtd_defence/experiments/configs/m1/m1__reference_direction_secret_mtd__none__s102.yaml",
+  "started_utc": "2026-11-21T01:40:14Z",
+  "load_average_start": [
+    1.2646484375,
+    1.45947265625,
+    1.51953125
+  ],
+  "previous_attempt_moved_to": null,
+  "status": "completed",
+  "detail": "exit code 0",
+  "wall_seconds": 110.855,
+  "finished_utc": "2026-11-21T01:42:05Z",
+  "load_average_end": [
+    1.34326171875,
+    1.5068359375,
+    1.533203125
+  ],
+  "analysis": {
+    "final_accuracy": 0.8331,
+    "final_loss": 0.4576889844894409,
+    "final_backdoor_asr": 0.030222222222222223,
+    "mean_deviation_from_honest_relative": 0.03446270759132606,
+    "mean_malicious_share_effective": 0.0,
+    "mean_malicious_share_submitted": 0.0,
+    "mean_reference_max_abs_error": 6.929039955139161e-08,
+    "max_reference_max_abs_error": 1.1920928955078125e-07,
+    "mean_reference_relative_error": 8.074520723238014e-08,
+    "max_reference_relative_error": 1.1944056978732423e-07,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  },
+  "reanalysis": {
+    "mean_deviation_from_honest_relative": 0.03446270759132606,
+    "mean_malicious_share_submitted": 0.0,
+    "instrumentation_ignored_entries": 0,
+    "instrumentation_inconsistent_rounds": 0
+  }
+}

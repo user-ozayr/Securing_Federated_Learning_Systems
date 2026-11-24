@@ -12,9 +12,11 @@ Aggregation paths (selected by configuration):
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import secrets
 import time
 import uuid
 from collections.abc import Mapping
@@ -54,6 +56,7 @@ from fl_security.smpc.robust import (
     SecureDefenceConfig,
     apply_delta,
     decode_robust_output,
+    direction_key,
     encode_delta,
     flatten_delta,
     robust_reference,
@@ -241,6 +244,41 @@ def run_flower_simulation(config: dict) -> None:
     global_model = make_model()
     initial_state = global_model.state_dict()
     parameter_count = count_parameters(global_model)
+
+    # Direction screen key material. "secret": FL_MTD_SECRET if provisioned,
+    # otherwise a fresh per-run key that is never stored, so clients cannot
+    # predict the checked coordinates. "public": derived from the experiment seed.
+    direction_enabled = norm_defence is not None and norm_defence.direction_check
+    direction_material, direction_key_source = None, None
+    if direction_enabled:
+        if norm_defence.direction_subset == "secret":
+            env_secret = os.environ.get("FL_MTD_SECRET")
+            if env_secret:
+                direction_material = hashlib.sha256(
+                    b"direction-screen\x00" + env_secret.encode("utf-8")).digest()
+                direction_key_source = "FL_MTD_SECRET"
+            else:
+                direction_material = secrets.token_bytes(32)
+                direction_key_source = "per-run random key (not stored)"
+        elif norm_defence.direction_subset == "public":
+            direction_material = hashlib.sha256(f"public-direction-{seed}".encode()).digest()
+            direction_key_source = "public seed"
+        else:
+            direction_key_source = "all coordinates"
+
+    def direction_indices_for(round_num: int) -> list[int] | None:
+        if not direction_enabled:
+            return None
+        key = (None if direction_material is None
+               else direction_key(direction_material, round_num))
+        return norm_defence.direction_indices(parameter_count, key)
+
+    def direction_spec_for(round_num: int) -> dict | None:
+        """What the parties receive for the round (never sent to clients)."""
+        indices = direction_indices_for(round_num)
+        if indices is None:
+            return None
+        return {"min_agree": norm_defence.min_agreement_count(len(indices)), "indices": indices}
     if use_smpc:
         mpc_input_count = sum(
             tensor.numel()
@@ -346,10 +384,27 @@ def run_flower_simulation(config: dict) -> None:
                 raise RuntimeError(
                     f"Client {client_id}: non-finite values produced "
                     f"during local training in tensors: {bad_training}")
+            clean_state = None
+            if attacker.needs_clean_update(client_id, round_num):
+                # the evasive attacker also trains honestly, from the same model
+                clean_model = make_model()
+                clean_model.load_state_dict(state)
+                torch.manual_seed(seed + round_num * 100_000 + client_id + 50_000)
+                clean_state = train_local(
+                    clean_model,
+                    DataLoader(dataset, batch_size=int(fl_config.get("batch_size", 32)),
+                               shuffle=True),
+                    epochs=int(fl_config.get("local_epochs", 1)),
+                    lr=float(fl_config.get("learning_rate", 0.01)),
+                    device=device,
+                )
+            known = fit_config.get("direction_indices_json")
             estimate = fit_config.get("defence_threshold_estimate")
             local_state = attacker.perturb_update(
                 client_id, round_num, state, local_state,
                 threshold_estimate=None if estimate is None else float(estimate),
+                clean_state_dict=clean_state,
+                known_indices=None if known is None else json.loads(known),
             )
 
             bad_attack = [
@@ -533,10 +588,16 @@ def run_flower_simulation(config: dict) -> None:
                     "client_id": int(cid),
                     "smpc_enabled": bool(use_smpc),
                 }
-                if self.threshold_estimate is not None and attacker.attack_type == "adaptive_backdoor":
+                if self.threshold_estimate is not None and attacker.attack_type in (
+                        "adaptive_backdoor", "evasive_backdoor"):
                     # Thresholds are public (static) or revealed every round
                     # (adaptive); the adaptive attacker is assumed to know them.
                     client_config["defence_threshold_estimate"] = float(self.threshold_estimate)
+                if (attacker.attack_type == "evasive_backdoor" and direction_enabled
+                        and norm_defence.direction_subset != "secret"):
+                    # a public (or full) subset is known to every client
+                    client_config["direction_indices_json"] = json.dumps(
+                        direction_indices_for(int(server_round)))
 
                 if use_smpc:
                     client_config.update({
@@ -578,6 +639,7 @@ def run_flower_simulation(config: dict) -> None:
                         weights=weights,
                         robust_spec=secure_defence.round_spec(weights),
                         chunk_size=secure_defence.chunk_size,
+                        direction=direction_spec_for(int(server_round)),
                     )
                 else:
                     start_round(
@@ -593,7 +655,8 @@ def run_flower_simulation(config: dict) -> None:
 
             return instructions
 
-        def _apply_norm_defence(self, config_obj, client_ids, client_states, counts):
+        def _apply_norm_defence(self, config_obj, client_ids, client_states, counts,
+                                server_round=0):
             """Plaintext execution of the norm-defence algorithm (reference only)."""
             order = sorted(range(len(client_ids)), key=lambda i: client_ids[i])
             sorted_ids = [client_ids[i] for i in order]
@@ -603,7 +666,10 @@ def run_flower_simulation(config: dict) -> None:
             inputs = [
                 encode_delta(client_states[i], base, config_obj.fractional_bits) for i in order
             ]
-            result = robust_reference(inputs, weights, spec)
+            indices = direction_indices_for(int(server_round))
+            result = robust_reference(
+                inputs, weights, spec, direction_indices=indices,
+                min_agree=config_obj.min_agreement_count(len(indices)) if indices else 0)
             return sorted_ids, weights, decode_robust_output(result, weights, config_obj)
 
         def _record_norm_defence(self, sorted_ids, weights, decoded, config_obj):
@@ -640,6 +706,18 @@ def run_flower_simulation(config: dict) -> None:
                 "rejected_false_positives": rejection["fp"],
                 "weights_json": json.dumps(dict(zip(sorted_ids, weights))),
             }
+            if result.direction_failed:
+                direction = {cid: int(f) for cid, f in zip(sorted_ids, result.direction_failed)}
+                counts_dir = _detection_counts(direction, malicious)
+                self.last_defence.update({
+                    "direction_rejected_client_ids": json.dumps(
+                        [cid for cid in sorted_ids if direction[cid]]),
+                    "direction_true_positives": counts_dir["tp"],
+                    "direction_false_positives": counts_dir["fp"],
+                    "direction_agreement_json": json.dumps(
+                        dict(zip(sorted_ids, result.agreement))),
+                    "direction_key_source": direction_key_source,
+                })
 
         def aggregate_fit(self, server_round, results, failures):
             started = time.perf_counter()
@@ -732,6 +810,7 @@ def run_flower_simulation(config: dict) -> None:
                             output_client_id=num_clients,
                             client_count=len(client_ids),
                             dimension=mpc_input_count - 1,
+                            direction=direction_enabled,
                         )
                     else:
                         aggregated = receive_weighted_average(
@@ -784,7 +863,8 @@ def run_flower_simulation(config: dict) -> None:
                     elif reference_defence is not None:
                         self.last_robust_report = {}
                         sorted_ids, weights, decoded = self._apply_norm_defence(
-                            reference_defence, client_ids, client_states, counts
+                            reference_defence, client_ids, client_states, counts,
+                            server_round=server_round,
                         )
                         self._record_norm_defence(sorted_ids, weights, decoded, reference_defence)
                         if decoded.output_check_passed and decoded.accepted_weight > 0:
@@ -808,6 +888,14 @@ def run_flower_simulation(config: dict) -> None:
                             if torch.is_floating_point(t)
                         ]).numpy(),
                     )
+                    spec = direction_spec_for(int(server_round))
+                    if spec is not None:
+                        # evaluation record only: lets the analysis recompute the
+                        # round exactly; a deployment would not store the subset
+                        np.save(
+                            instrumentation_dir / f"r{server_round:04d}_direction.npy",
+                            np.array([spec["min_agree"], *spec["indices"]], dtype=np.int64),
+                        )
                 return (
                     ndarrays_to_parameters([
                         tensor.detach().cpu().numpy()
