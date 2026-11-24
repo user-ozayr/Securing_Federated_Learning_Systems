@@ -29,7 +29,7 @@ from fl_security.experiments.grid import RunSpec, all_runs
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _git(*args: str) -> str:
+def _git_output(*args: str) -> str:
     try:
         return subprocess.run(
             ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, timeout=30, check=False
@@ -117,8 +117,8 @@ def run_one(spec: RunSpec, output_root: Path, timeout_seconds: int) -> dict:
         "mtd_schedule": config.get("mtd", {}).get("schedule"),
         "mtd_secret_sha256_commitment": commitment,
         "config_sha256": hashlib.sha256(config_text.encode("utf-8")).hexdigest(),
-        "git_commit": _git("rev-parse", "HEAD"),
-        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "git_commit": _git_output("rev-parse", "HEAD"),
+        "git_dirty": bool(_git_output("status", "--porcelain", "--untracked-files=no")),
         "host": platform.node(), "python": sys.version.split()[0],
         "command": " ".join(command[1:]),
         "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

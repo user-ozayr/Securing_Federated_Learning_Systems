@@ -1,0 +1,9 @@
+parameter_count,padded_input_count,compile_wall_seconds,peak_rss_mib,integer_triples,simple_multiplications,integer_opens,vm_rounds,status,log
+1000,1024,1.006,45.6,4282,1210,1030,29,PASS,stream_compile_1001.log
+10000,10240,1.809,62.1,41146,10426,10246,29,PASS,stream_compile_10001.log
+50000,50176,1.758,62.9,200890,50362,50182,29,PASS,stream_compile_50001.log
+100000,100352,1.809,61.8,401594,100538,100358,29,PASS,stream_compile_100001.log
+250000,250880,1.808,62.3,1003706,251066,250886,29,PASS,stream_compile_250001.log
+500000,500736,1.757,61.8,2003130,500922,500742,29,PASS,stream_compile_500001.log
+1000000,1000448,1.808,62.5,4001978,1000634,1000454,29,PASS,stream_compile_1000001.log
+2122187,2122752,1.808,62.1,8491194,2122938,2122758,29,PASS,stream_compile_2122188.log

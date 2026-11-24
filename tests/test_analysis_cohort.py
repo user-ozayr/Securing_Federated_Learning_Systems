@@ -41,7 +41,7 @@ def _write_run(run_dir: Path, entries: dict[int, list[int]], cohort: dict[int, l
 
 def test_reanalysis_ignores_entries_outside_the_recorded_cohort(tmp_path):
     run_dir = tmp_path / "run"
-    # client 7 is a leftover of an earlier attempt with a different cohort
+    # Client 7's entry is left over from an earlier attempt with a different cohort.
     _write_run(run_dir, entries={1: [0, 1, 7]}, cohort={1: [0, 1]}, completed={1: 2})
     summary = reanalyze_packed(run_dir, PLAIN_FEDAVG)
     row = pd.read_csv(run_dir / "round_analysis.csv").iloc[0]

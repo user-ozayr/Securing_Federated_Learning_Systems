@@ -1,47 +1,31 @@
 # SPDZ2k implementation and assumptions
 
-The project pins MP-SPDZ v0.4.3, uses `spdz2k-party.x`, arithmetic modulo 2^64, fixed-point scale 1,000,000 by default, with three parties in the direct profiling and tiny Flower smoke tests. The checked-in `configs/smpc.yaml` requests four aggregation parties; use the configuration?s actual value when reproducing a run. Client parameters are encoded, multiplied by the server-validated local sample count, and privately input to the MPC. The circuit sums these values. The private count in each client vector is compared with the corresponding public, server-known partition size; only the equality/mismatch bit is opened to the parties. A mismatch aborts.
+The project pins MP-SPDZ v0.4.3 and runs `spdz2k-party.x` over the ring modulo 2^64. The default fixed-point scale is 1,000,000. Direct profiling and the small Flower smoke tests used three parties. The checked-in `configs/smpc.yaml` requests four aggregation parties, so a reproduction should use the value specified by its configuration.
 
-The aggregate weighted sum and total count are opened only to the designated output client. That client checks the total against server-known expected counts before decoding. Flower receives no individual plaintext parameter arrays in secure mode. The output is the weighted average of client model states, matching FedAvg.
+For each client, the server validates the local sample count, multiplies the encoded model parameters by that count, and privately inputs the result to the MPC. The circuit sums the weighted parameters. It also compares the private count in each client vector with the corresponding public count known to the server. Only the equality or mismatch bit is opened to the parties. A mismatch aborts the round.
 
-MP-SPDZ v0.4.3 classifies SPDZ2k as malicious security with dishonest majority, over a power-of-two ring. The protocol model provides security with abort and does not promise continued availability during malicious disruption. In a three-party run, protocol-level privacy/integrity can tolerate up to two corrupt parties only under the protocol's setup and cryptographic assumptions, with at least one party retaining the honest contribution needed for privacy; colluding parties can still force abort. This is not a claim that the deployed service or same-host experiment has independently isolated parties. Production claims require independent hosts, authenticated/encrypted network configuration, protected preprocessing/setup material, and a deployment-specific trust review.
+The weighted sum and total count are opened only to the designated output client. Before decoding the result, that client checks the total against the expected count known to the server. In secure mode, Flower does not receive individual plaintext parameter arrays. The output is the weighted average of the client model states, as in FedAvg.
 
-The party service launches `spdz2k-party.x` with `-e`, which requests MP-SPDZ SSL-encrypted party connections; the local demo creates SSL material with MP-SPDZ `setup-ssl.sh`. This differs from MP-SPDZ's default for dishonest-majority protocols, which is unencrypted. The experiment exercised this setting on loopback only. Cross-host certificate distribution, identity validation, renewal, firewalling, and independent party isolation have not been validated; do not infer production network security from the same-host run.
+MP-SPDZ v0.4.3 classifies SPDZ2k as maliciously secure with dishonest majority, using a power-of-two ring. Its protocol model provides security with abort; it does not guarantee availability when a malicious party disrupts the run. In a three-party run, protocol-level privacy and integrity can tolerate up to two corrupt parties only under the protocol's setup and cryptographic assumptions, with at least one party retaining the honest contribution required for privacy. Colluding parties can still force an abort. These properties do not mean that the deployed service or the same-host experiment uses independently isolated parties. Production claims require separate hosts, authenticated and encrypted network configuration, protected preprocessing and setup material, and a deployment-specific trust review.
 
-Fixed-point encoding, ring bounds, and output decoding are implementation checks, not a proof against all malicious inputs. MP-SPDZ itself notes that the software has not undergone the security review expected for critical production code. Sources: [MP-SPDZ v0.4.3 protocol matrix](https://mp-spdz.readthedocs.io/en/v0.4.3/readme.html), [runtime ring/security/network options](https://mp-spdz.readthedocs.io/en/v0.4.3/runtime-options.html).
+The party service starts `spdz2k-party.x` with `-e`, which requests SSL-encrypted party connections. The local demo creates SSL material with MP-SPDZ `setup-ssl.sh`. MP-SPDZ otherwise defaults to unencrypted connections for dishonest-majority protocols. The experiment used the encrypted setting on loopback only. Cross-host certificate distribution, identity validation, renewal, firewalling, and independent party isolation remain unvalidated. The same-host run therefore provides no evidence of production network security.
+
+Fixed-point encoding, ring bounds, and output decoding are implementation checks. They do not prove security against every malicious input. MP-SPDZ also notes that the software has not received the security review expected of critical production code. Sources: [MP-SPDZ v0.4.3 protocol matrix](https://mp-spdz.readthedocs.io/en/v0.4.3/readme.html) and [runtime ring, security, and network options](https://mp-spdz.readthedocs.io/en/v0.4.3/runtime-options.html).
 
 ## Robust aggregation program (added 2026-11-20)
 
-`programs/spdz2k_robust_aggregate.mpc` runs on the same party service, binary
-(`spdz2k-party.x`), ring (`-R 64`, SPDZ2k security parameter s = 64) and client
-I/O protocol as the weighted-sum program. Differences:
+`programs/spdz2k_robust_aggregate.mpc` uses the same party service, binary (`spdz2k-party.x`), ring (`-R 64`, SPDZ2k security parameter s = 64), and client I/O protocol as the weighted-sum program. Its input and computation differ:
 
-* **Input encoding:** clients send `[n, round((w_local − w_global)·2^f), 0-padding]`
-  (default `f = 14`, chunk size 256), not `n·w`. The count binding is unchanged.
-* **Computation:** per-client squared norms (dot products), optional secure
-  lower-median threshold, screening (revealed accept bit) and/or clipping with
-  secret coefficients (binary search, no `sfix`, no truncation). All
-  comparisons are MP-SPDZ `sint` comparisons, i.e. the sign of the 64-bit ring
-  difference; parameters are validated so that honest operands stay below 2⁶².
-* **Output:** `[T, clipped count, accept bits, clip flags (optional), Σ a·C·w·x]`
-  to the designated output client only.
-* **Program identity:** the party service validates the payload
-  (`weights`, `robust_spec`, `chunk_size`), prepends the validated arguments as a
-  `ROUND_ARGUMENTS` literal to the packaged source, compiles without arguments
-  (short bytecode name) and returns the bytecode SHA-256; parties must agree.
-* **Measurements:** every completed round reports MP-SPDZ's own "Time", "Data
-  sent" and "Global data sent" lines through the authenticated `status` call.
-* **Cleanup:** all bytecode tapes of a round (`<name>-*.bc`) are removed; the
-  previous implementation removed only `-0.bc` and left auxiliary tapes behind.
+* **Input encoding:** Clients send `[n, round((w_local - w_global)·2^f), 0-padding]` (default `f = 14`, chunk size 256), rather than `n·w`. Count binding is unchanged.
+* **Computation:** The circuit computes per-client squared norms using dot products, then optionally applies a secure lower-median threshold, screening (with the accept bit revealed), and/or clipping with secret coefficients. Clipping uses binary search without `sfix` or truncation. Comparisons use MP-SPDZ `sint`, meaning the sign of the 64-bit ring difference. Honest operands are validated to remain below 2^62.
+* **Output:** The designated output client alone receives `[T, clipped count, accept bits, clip flags (optional), Σ a·C·w·x]`.
+* **Program identity:** The party service validates the payload (`weights`, `robust_spec`, `chunk_size`), prepends the validated arguments as a `ROUND_ARGUMENTS` literal to the packaged source, compiles without arguments to produce a short bytecode name, and returns the bytecode SHA-256. Parties must agree on that hash.
+* **Measurements:** Each completed round reports MP-SPDZ's own “Time”, “Data sent”, and “Global data sent” lines through the authenticated `status` call.
+* **Cleanup:** The service removes every bytecode tape for the round (`<name>-*.bc`). The previous implementation removed only `-0.bc`, leaving auxiliary tapes behind.
 
 Correctness evidence:
-* 13 real three-party scenarios match the exact integer reference bit for bit
-  (`research_output/completion/experiments/mpc_validation`; repeated from a
-  fresh clone).
-* So do 21 benchmark rounds of up to 100,000 parameters.
-* Every instrumented FL run re-checks the applied update against the reference.
-  Over the 70 SPDZ2k robust runs (700 rounds), the maximum absolute difference is
-  2.4·10⁻⁷ (median per run 1.2·10⁻⁷), i.e. float32 resolution of the model, and
-  the maximum relative difference is 2.0·10⁻⁷.
-* Training trajectories are identical to the plaintext execution of the same
-  algorithm (`research_output/completion/FINAL_VALIDATION_REPORT.md` §3–4).
+
+* Thirteen real three-party scenarios match the exact integer reference bit for bit (`research_output/completion/experiments/mpc_validation`). The scenarios were repeated from a fresh clone.
+* The same bit-for-bit match holds for 21 benchmark rounds with up to 100,000 parameters.
+* Every instrumented federated-learning run checks the applied update against the reference. Across 70 SPDZ2k robust runs (700 rounds), the maximum absolute difference was 2.4·10⁻⁷ and the median per-run difference was 1.2·10⁻⁷, at float32 model resolution. The maximum relative difference was 2.0·10⁻⁷.
+* Training trajectories match the plaintext execution of the same algorithm (`research_output/completion/FINAL_VALIDATION_REPORT.md`, sections 3–4).

@@ -102,7 +102,7 @@ def client_port_base() -> int:
     return value
 
 
-def _client_class(mp_spdz_home: str | os.PathLike[str]):
+def _load_external_io_client_class(mp_spdz_home: str | os.PathLike[str]):
     external_io = Path(mp_spdz_home).expanduser().resolve() / "ExternalIO"
     client_path, domains_path = external_io / "client.py", external_io / "domains.py"
     if not client_path.is_file() or not domains_path.is_file():
@@ -263,7 +263,7 @@ def submit_client_update(
         raise ValueError("client_id must be a valid MP-SPDZ client ID")
     if len(hosts) < 2 or not all(isinstance(host, str) and host for host in hosts):
         raise ValueError("at least two SPDZ2k party hosts are required")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(
         client_class, hosts, port_base, client_id, credentials_dir
     )
@@ -304,7 +304,7 @@ def submit_client_delta(
         raise ValueError("at least two SPDZ2k party hosts are required")
     encoded = encode_delta(local_state, global_state, fractional_bits)
     wire_values = chunked_wire_values(num_examples, encoded, chunk_size)
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(client_class, hosts, port_base, client_id, credentials_dir)
     try:
         for offset in range(0, len(wire_values), chunk_size):
@@ -335,7 +335,7 @@ def receive_robust_result(
         raise ValueError("output_client_id must be a valid MP-SPDZ client ID")
     if client_count < 2 or dimension < 1:
         raise ValueError("robust output requires two clients and a positive dimension")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(client_class, hosts, port_base, output_client_id, credentials_dir)
     try:
         outputs = client.receive_outputs(2 + 2 * client_count + dimension)
@@ -372,7 +372,7 @@ def receive_weighted_average(
         raise ValueError("output_client_id must be a valid MP-SPDZ client ID")
     if len(hosts) < 2 or not all(isinstance(host, str) and host for host in hosts):
         raise ValueError("at least two SPDZ2k party hosts are required")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(
         client_class,
         hosts,
@@ -671,7 +671,7 @@ def submit_wire_values(
     """
     if not wire_values or len(wire_values) % chunk_size:
         raise ValueError("wire values must be a non-empty multiple of chunk_size")
-    client_class = _client_class(mp_spdz_home)
+    client_class = _load_external_io_client_class(mp_spdz_home)
     client = _connect_client(client_class, hosts, port_base, client_id, credentials_dir)
     try:
         for offset in range(0, len(wire_values), chunk_size):

@@ -140,5 +140,5 @@ all limitations are in `research_output/completion/`:
 The earlier integrated Flower run was a same-host, one-round smoke test with a
 synthetic 8-parameter model; direct production-circuit profiling completed up to
 100,000 parameters (246 s) and a 250k run reached a 300 s watchdog. Those
-records remain in `research_output/runtime_optimization/` and
-`research_output/scalability_phase/` and are not re-labelled.
+records remain in `research_output/archive/early_phase_2026-11-18/runtime_optimization/` and
+`research_output/archive/early_phase_2026-11-18/scalability_phase/` and are not re-labelled.

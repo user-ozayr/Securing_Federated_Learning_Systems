@@ -1,0 +1,5 @@
+parameters,chunk_size,number_of_chunks,compile_wall_seconds,peak_rss_mib,integer_triples,simple_multiplications,integer_opens,vm_rounds,status,log
+2122187,1024,2073,1.759,62.4,8491194,2122938,2122758,29,PASS,full_shape_chunk_1024.log
+2122187,4096,519,6.932,164.0,8503482,2126010,2125830,29,PASS,full_shape_chunk_4096.log
+2122187,16384,130,29.783,573.7,8519866,2130106,2129926,29,PASS,full_shape_chunk_16384.log
+2122187,65536,33,120.198,2140.4,,,,,TIMEOUT_120S,full_shape_chunk_65536.log

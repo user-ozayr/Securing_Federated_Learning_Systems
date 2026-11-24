@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "detail": "run completed",
+  "total_seconds": 246.23642198974267,
+  "samples": [
+    {
+      "party_id": 0,
+      "peak_rss": 409108480,
+      "cpu_ticks": 17852,
+      "read_bytes": 0,
+      "write_bytes": 0
+    },
+    {
+      "party_id": 1,
+      "peak_rss": 409812992,
+      "cpu_ticks": 17830,
+      "read_bytes": 0,
+      "write_bytes": 0
+    },
+    {
+      "party_id": 2,
+      "peak_rss": 406822912,
+      "cpu_ticks": 17744,
+      "read_bytes": 0,
+      "write_bytes": 0
+    }
+  ],
+  "error": ""
+}

@@ -31,7 +31,7 @@ def test_trigger_stamps_patch_and_poisons_requested_fraction():
     changed = (poisoned_images.reshape(10, -1) != 0).any(dim=1)
     assert int(changed.sum()) == 5
     assert torch.all(poisoned_labels[changed] == 0)
-    assert torch.equal(images, torch.zeros(10, 1, 28, 28))  # inputs not modified in place
+    assert torch.equal(images, torch.zeros(10, 1, 28, 28))  # The original inputs must remain unchanged.
 
 
 def test_attack_success_rate_counts_only_non_target_samples():
@@ -65,7 +65,7 @@ def test_adaptive_backdoor_scales_to_the_expected_threshold():
     attacker = ByzantineAttacker(_config(attack_type="adaptive_backdoor", adaptive_norm_fraction=0.5), 12)
     cid = next(iter(attacker.malicious_clients))
     global_state = {"w": torch.zeros(2)}
-    local_state = {"w": torch.tensor([3.0, 4.0])}          # norm 5
+    local_state = {"w": torch.tensor([3.0, 4.0])}          # This update has a norm of 5.
     result = attacker.perturb_update(cid, 1, global_state, local_state, threshold_estimate=2.0)
     assert torch.allclose(torch.linalg.vector_norm(result["w"]), torch.tensor(1.0))
 

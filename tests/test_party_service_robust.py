@@ -34,7 +34,7 @@ def test_robust_identity_uses_short_name_and_sorted_arguments():
     assert identity.program_name == identity.program_base
     assert identity.args[:3] == ["1,4", "100,400", "1,1"]
     assert identity.args[3:7] == ["11", "9", "20000", "16"]
-    base, name, args = identity          # backward-compatible unpacking
+    base, name, _ = identity              # still supports three-value unpacking
     assert base == name
 
 

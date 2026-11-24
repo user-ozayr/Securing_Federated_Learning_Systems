@@ -125,7 +125,7 @@ def test_robust_strategy_applies_reference_decoded_update(monkeypatch, tmp_path)
             res = client_fn(proxy.cid).fit(ins)
             assert parameters_to_ndarrays(res.parameters) == []
             results.append((proxy, res))
-        new_parameters, metrics = strategy.aggregate_fit(1, results, [])
+        new_parameters, _ = strategy.aggregate_fit(1, results, [])
         after = parameters_to_ndarrays(new_parameters)
         flat = torch.cat([torch.from_numpy(a - b).reshape(-1).double() for a, b in zip(after, before)])
         assert torch.allclose(flat, applied[0].delta, atol=1e-6)
@@ -149,7 +149,7 @@ def test_robust_strategy_applies_reference_decoded_update(monkeypatch, tmp_path)
         "evaluation": {"output_dir": str(tmp_path), "save_csv": True, "save_plots": False},
     }
     flower_runner.run_flower_simulation(config)
-    args, kwargs = started[0]
+    _, kwargs = started[0]
     assert kwargs["program"] == "robust_aggregate"
     assert kwargs["weights"] == [1, 1, 1, 1]
     assert kwargs["robust_spec"] == defence_config.round_spec([1, 1, 1, 1])
@@ -159,7 +159,7 @@ def test_robust_strategy_applies_reference_decoded_update(monkeypatch, tmp_path)
     assert row["smpc_program"] == "robust_aggregate"
     malicious = json.loads(row["malicious_client_ids"])
     assert len(malicious) == 1
-    assert json.loads(row["defence_rejected_client_ids"]) == malicious   # boosted x50 update rejected
+    assert json.loads(row["defence_rejected_client_ids"]) == malicious   # The update scaled by 50 is rejected.
     assert row["rejected_true_positives"] == 1
     assert row["mpc_protocol_seconds_max"] == 1.5
     assert row["defence_output_check_passed"] == 1
