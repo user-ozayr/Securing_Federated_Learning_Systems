@@ -7,6 +7,6 @@ for cfg in configs/*.yaml; do
     echo "Running experiment: $cfg"
     echo "========================================="
     # SMPC configurations start and stop local party processes automatically.
-    python run_experiment.py --config "$cfg" --local-aggregators
+    python run_experiment.py --config "$cfg" --local-mp-spdz
 done
 echo "Benchmark suite completed."
