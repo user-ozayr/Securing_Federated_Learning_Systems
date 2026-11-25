@@ -1,4 +1,0 @@
-parameters,input_count,source_sha256,compile_seconds,peak_rss_mib,triples,multiplications,opens,vm_rounds,exit_code,status,log
-250000,250001,1e26719b74fb35cb8c0aff5a2a12a23e21ad1d760a08070a91a8209e2e6ef333,1.78,62.2,1003706,251066,250886,29,0,PASS,production_capped_250001.log
-500000,500001,1e26719b74fb35cb8c0aff5a2a12a23e21ad1d760a08070a91a8209e2e6ef333,1.775,62.2,2003130,500922,500742,29,0,PASS,production_capped_500001.log
-2122187,2122188,1e26719b74fb35cb8c0aff5a2a12a23e21ad1d760a08070a91a8209e2e6ef333,1.751,62.2,8491194,2122938,2122758,29,0,PASS,production_capped_2122188.log

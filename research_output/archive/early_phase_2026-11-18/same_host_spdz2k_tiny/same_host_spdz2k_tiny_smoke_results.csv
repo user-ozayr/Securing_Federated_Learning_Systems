@@ -1,3 +1,0 @@
-round,global_loss,global_accuracy,selected_clients,completed_clients,malicious_selected,smpc_enabled,mtd_secret_seeded,mp_spdz_parties_used,mp_spdz_input_bytes,aggregation_seconds,client_failures_or_omissions,robust_aggregation_enabled,robust_aggregation_rule,detected_client_count,detected_client_ids,accepted_client_ids,robust_fallback_used,flagged_client_count,history_updated_client_ids,detection_true_positives,detection_false_positives,detection_false_negatives,detection_precision,detection_recall,robust_client_scores_json
-0,0.6810730695724487,0.75,0,0,0,1,0,3,0,0.0,0,0,fedavg,0,[],[],0,0,[],0,0,0,,,[]
-1,0.6810726523399353,0.75,3,3,0,1,0,3,73728,0.8073652978055179,0,0,fedavg,0,[],"[0, 1, 2]",0,0,[],0,0,0,,,[]

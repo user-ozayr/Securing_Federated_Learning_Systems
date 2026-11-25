@@ -1,6 +1,0 @@
-Command: PYTHONPATH=src /home/ubuntu/gemini/fl-security-research/.venv311/bin/python -m pytest -ra tests
-Working directory: /home/ubuntu/gemini/fl-security-research-spdz2k-thesis
-Exit code: 0
-Duration: 5.29 seconds
-Result: 77 passed, 0 failed, 2 upstream deprecation warnings
-Raw transcript: FULL_TEST_RESULTS.txt

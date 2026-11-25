@@ -1,6 +1,0 @@
-dimension,compile_wall_seconds,peak_rss_mib,integer_triples,simple_multiplications,integer_opens,vm_rounds,status,log
-2,0.704,40.1,2915,2900,59,338,PASS,norm_clip_compile_2.log
-10,0.704,41.1,4987,4924,115,338,PASS,norm_clip_compile_10.log
-50,0.855,40.0,15347,15044,395,338,PASS,norm_clip_compile_50.log
-100,0.956,41.5,28297,27694,745,338,PASS,norm_clip_compile_100.log
-250,1.257,47.5,67147,65644,1795,338,PASS,norm_clip_compile_250.log

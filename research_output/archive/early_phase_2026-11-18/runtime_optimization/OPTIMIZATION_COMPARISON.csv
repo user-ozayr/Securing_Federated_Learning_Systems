@@ -1,6 +1,0 @@
-optimization,parameters,compile_seconds_per_party,warning,offline_plus_online_seconds,triples,vm_rounds,global_protocol_data_sent_mb,aggregate_check,interpretation
-MP-SPDZ default memory ordering (-M off),8,1.379,present,~4.21,4282,29,487.03,exact match; count validated,reference A/B; no security settings changed
-Preserve memory instruction order (-M on),8,3.638,absent,~4.21,4282,29,487.03,exact match; count validated,production default; compile cost increased on tiny circuit
-Single-message full Array output read,10000,not separately measured,not applicable,offline 20.68-20.79; online 2.83-2.94,41146,29,4510.11,post-fix exact match,corrects client/server framing; input chunks unchanged
-Single-message full Array output read,50000,not separately measured,not applicable,offline 100.7-100.8; online 7.88-8.10,200890,29,21511.5,exact match,measured direct run
-Single-message full Array output read,100000,not separately measured,not applicable,offline 196.96-197.42; online 16.95-17.41,401594,29,42999.4,exact match,measured direct run
